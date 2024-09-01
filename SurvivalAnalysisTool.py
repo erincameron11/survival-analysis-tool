@@ -22,11 +22,10 @@ gene_names = ['A1BG', 'A1CF', 'A2BP1', 'A2LD1', 'A2M', 'A2ML1', 'A4GALT', 'A4GNT
 
 
 # ------------------ HELPER FUNCTIONS ------------------
-def handle_submit():
+def handle_submit(genes_entered):
     # If there are genes entered, display the kaplan meier plot and submit
     # https://erdogant.github.io/kaplanmeier/pages/html/Examples.html
     if genes_entered:
-        # TODO: Display the kaplan meier plot display using the genes entered
         print("submitted")
 
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
@@ -51,6 +50,36 @@ def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
     st.markdown(outline_css, unsafe_allow_html=True)
 
 
+def customize_submit_button(initial_bg_color: str, initial_outline_color: str, initial_text_color: str,
+                            hover_bg_color: str, hover_outline_color: str,
+                            active_bg_color: str, active_outline_color: str) -> None:
+    css = f"""
+    <style>
+    /* Initial button style */
+    div.stButton > button {{
+        background-color: {initial_bg_color} !important;
+        border-color: {initial_outline_color} !important;
+        color: {initial_text_color} !important;
+    }}
+    
+    /* Button hover effect */
+    div.stButton > button:hover {{
+        background-color: {hover_bg_color} !important;
+        border-color: {hover_outline_color} !important;
+        color: white !important;
+    }}
+
+    /* Button active effect */
+    div.stButton > button:active {{
+        background-color: {active_bg_color} !important;
+        border-color: {active_outline_color} !important;
+        color: white !important;
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+
 # ------------------ APP ------------------
 def main():
     # App title
@@ -67,10 +96,20 @@ def main():
     )
 
     # Apply the CSS to change the color of the multiselect tags etc.
-    change_multiselect_colours("green", "gray")
+    change_multiselect_colours("#4A9661", "gray")
+    # Apply the CSS to change the color of the button and outline on hover and active
+    customize_submit_button(
+        initial_bg_color="white", 
+        initial_outline_color="#D5D6D8", 
+        initial_text_color="#31333F",
+        hover_bg_color="#1f77b4", 
+        hover_outline_color="#1f77b4",
+        active_bg_color="#5a9bd4", 
+        active_outline_color="#5a9bd4"
+    )
     
     # Submit button
-    st.button("Submit", on_click=handle_submit)
+    st.button("Submit", on_click=handle_submit, args=(genes_entered,))
 
 
 # ------------------ RUN THE APP ------------------
