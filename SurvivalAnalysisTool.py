@@ -7,7 +7,7 @@ import kaplanmeier as km
 # ------------------ DATA ------------------
 # Cache the dataframe using st.cache_data decorator
 @st.cache_data
-# Function to read in the tsv file (from: https://xenabrowser.net/datapages/?dataset=GDC-PANCAN.htseq_fpkm-uq.tsv&host=https%3A%2F%2Fgdc.xenahubs.net&removeHub=https%3A%2F%2Fxena.treehouse.gi.ucsc.edu%3A443)
+# Function to read in the RNA & ID/Gene mapping tsv files
 def load_data(filename, mapping_filename):
     # RNA matrix 
     df = pd.read_csv(filename, sep='\t')
@@ -20,8 +20,7 @@ def load_data(filename, mapping_filename):
 
 # ------------------ HELPER FUNCTIONS ------------------
 def handle_submit(genes_entered):
-    # If there are genes entered, display the kaplan meier plot and submit
-    # https://erdogant.github.io/kaplanmeier/pages/html/Examples.html
+    # TODO: If there are genes entered, display the kaplan meier plot and submit
     if genes_entered:
         print("submitted")
 
@@ -87,7 +86,7 @@ def main():
     st.write("Informational text area")
 
     # Call the load data method
-    df = load_data('GDC-PANCAN.htseq_fpkm-uq.tsv', 'gencode.v22.annotation.gene.probeMap')
+    df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.tsv', './data/gencode.v22.annotation.gene.probeMap')
     
     # Locate all gene names in a list
     gene_names = df['gene'].unique()

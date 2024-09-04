@@ -2,3 +2,4 @@
 *.tsv
 *.probeMap
 .streamlit/
+.DS_Store
