@@ -5,8 +5,9 @@ import pandas as pd
 import kaplanmeier as km
 import matplotlib.pyplot as plt # TESTING for image export of KM plots
 from datetime import datetime # TESTING for filename saving
+import numpy as np # TESTING for st.pyplot
 
-# ------------------ DATA ------------------
+# ------------------------------------ DATA ------------------------------------
 # Cache the dataframe using st.cache_data decorator
 @st.cache_data
 # Function to read in the RNA & ID/Gene mapping tsv files
@@ -44,20 +45,19 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
     return merged_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
 
 
-# ------------------ HELPER FUNCTIONS ------------------
+# ------------------------------------ HELPER FUNCTIONS ------------------------------------
 def handle_submit():
     # If the entire form is filled out, calculate GSVA, display the kaplan meier plot and submit
     if validate_form():
-        # TODO: Calculate GSVA
+        # Calculate GSVA
         calculate_gsva()
-        # TODO: Display the kaplan meier plot and submit
+        # Display the kaplan meier plot
         create_km_plot()
-        # TODO: Create two buttons to download output (GSVA and KM plot)
-        # download_output()
-        st.session_state.form_submitted = True  # Mark the form as submitted
-        print("Evaluating to true - validated & submitted")
+        # Mark the form as submitted
+        st.session_state.form_submitted = True
+        print("Form complete - validated & submitted")
     else:
-        print("Evaluating to false - not submitted")
+        print("Form not complete - not submitted")
 
 # TODO: Function to calculate GSVA scores
 def calculate_gsva():
@@ -69,7 +69,11 @@ def calculate_gsva():
 
 # TODO: Function to display the Kaplan Meier plot
 def create_km_plot():
-    print("TODO: create and display km plot")
+    # TESTING -- create and show KM plot
+    arr = np.random.normal(1, 1, size=100)
+    fig, ax = plt.subplots()
+    ax.hist(arr, bins=20)
+    return fig
 
 # TODO: Function to download the GSVA data to CSV file, and KM plot to PNG
 def download_output():
@@ -101,7 +105,7 @@ def validate_form():
         return False
 
 
-# ------------------ STYLING FUNCTIONS ------------------
+# ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
 def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
     tag_css = f"""
@@ -154,7 +158,7 @@ def customize_buttons(initial_bg_color: str, initial_outline_color: str, initial
     st.markdown(css, unsafe_allow_html=True)
 
     
-# ------------------ APP ------------------
+# ------------------------------------ APP ------------------------------------
 def main():    
     # App title
     st.title("SURVIVAL ANALYSIS")
@@ -162,6 +166,19 @@ def main():
     
     # Create a field for informational text
     st.subheader("Informational text area. Describe KM plots :chart_with_downwards_trend:, GSVA :notebook: and what to do on this webpage.")
+
+    # Apply the CSS to change the color of the multiselect tags etc.
+    change_multiselect_colours("#4A9661", "gray")
+    # Apply the CSS to change the color of the button and outline on hover and active
+    customize_buttons(
+        initial_bg_color="white", 
+        initial_outline_color="#D5D6D8", 
+        initial_text_color="#31333F",
+        hover_bg_color="#1f77b4", 
+        hover_outline_color="#1f77b4",
+        active_bg_color="#5a9bd4", 
+        active_outline_color="#5a9bd4"
+    )
 
     # Call the load data method
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
@@ -177,6 +194,7 @@ def main():
     cancer_types_entered = ["DEF"]
     cut_point_entered = "blank"
 
+    # Create a form for data input
     with st.form("km_plot_form", clear_on_submit=False):
         # Multiselect element for gene selection
         genes_entered = st.multiselect(
@@ -198,7 +216,7 @@ def main():
             # on_change=calculate_gsva,
         )
     
-        # Dropdown for cut-point...
+        # Dropdown for cut-point
         cut_point_entered = st.selectbox(
             "Cut-Point:",
             ("First value", "Second value", "Third value"),
@@ -206,30 +224,27 @@ def main():
             placeholder="Select cut-point...",
             key='cut_point_entered',
         )
-    
-        # Apply the CSS to change the color of the multiselect tags etc.
-        change_multiselect_colours("#4A9661", "gray")
-        # Apply the CSS to change the color of the button and outline on hover and active
-        customize_buttons(
-            initial_bg_color="white", 
-            initial_outline_color="#D5D6D8", 
-            initial_text_color="#31333F",
-            hover_bg_color="#1f77b4", 
-            hover_outline_color="#1f77b4",
-            active_bg_color="#5a9bd4", 
-            active_outline_color="#5a9bd4"
-        )
         
         # Submit button
         submit_button = st.form_submit_button("Create KM Plot", on_click=handle_submit)
 
-    download_results_placeholder = st.empty()
+    with st.container():
+        gsva_placeholder = st.empty()
+        km_plot_placeholder = st.empty()
+        download_results_placeholder = st.empty()
+    
+        # Conditionally display the results and download button after form submission
+        if st.session_state.get('form_submitted', False):
+            with gsva_placeholder:
+                st.write("GSVA OUTPUT HERE")
+            with km_plot_placeholder:
+                st.write("KM PLOT OUTPUT HERE")
+                fig = create_km_plot()
+                st.pyplot(fig)
+            with download_results_placeholder:
+                st.button("Download GSVA & KM Plot Output", on_click=download_output)
 
-    # Conditionally display the new button after form submission
-    if st.session_state.get('form_submitted', False):
-        with download_results_placeholder:
-            st.button("Download GSVA & KM Plot Output", on_click=download_output)
 
-# ------------------ RUN THE APP ------------------
+# ------------------------------------ RUN THE APP ------------------------------------
 if __name__ == "__main__":
     main()
