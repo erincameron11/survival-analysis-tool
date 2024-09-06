@@ -57,7 +57,22 @@ def handle_submit():
         st.session_state.form_submitted = True
         print("Form complete - validated & submitted")
     else:
+        with form_validation_placeholder:
+            st.write("Please fill in all input fields")
         print("Form not complete - not submitted")
+
+# Function to check if all data fields were filled out
+def validate_form():
+    # Use state sessions to get form values
+    genes_entered = st.session_state.get('genes_entered', '')
+    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
+    cut_point_entered = st.session_state.get('cut_point_entered', '')
+    
+    # If all form fields filled out, return True, else False
+    if genes_entered and cancer_types_entered and cut_point_entered:
+        return True
+    else:
+        return False
 
 # TODO: Function to calculate GSVA scores
 def calculate_gsva():
@@ -91,23 +106,9 @@ def download_output():
     plt.savefig(f'km_plot_{today}.png')
 
 
-# Function to check if all data fields were filled out
-def validate_form():
-    # Use state sessions to get form values
-    genes_entered = st.session_state.get('genes_entered', '')
-    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
-    cut_point_entered = st.session_state.get('cut_point_entered', '')
-    
-    # If all form fields filled out, return True, else False
-    if genes_entered and cancer_types_entered and cut_point_entered:
-        return True
-    else:
-        return False
-
-
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
-def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
+def change_multiselect_colours(tag_colour: str) -> None:
     # Multiselect Tag colour CSS styling
     tag_css = f"""
     <style>
@@ -126,13 +127,13 @@ def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
     div[data-baseweb="select"] > div {
         border: 0em solid white !important;
         border-radius: 4px !important;
-        box-shadow: 0 0 0 2px white !important; /* Maintain custom box-shadow */
+        box-shadow: 0 0 0 1px white !important; /* Maintain custom box-shadow */
     }
     /* Outline color when focused */
     div[data-baseweb="select"] > div:focus-within {
-        border: 0em solid gray;
-        box-shadow: 0 0 0 2px gray !important;  
-        border-color: gray !important;
+        border: 0em solid #c4c1c1;
+        box-shadow: 0 0 0 1px #c4c1c1 !important;  
+        border-color: #c4c1c1 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -175,10 +176,10 @@ def main():
     st.divider()
     
     # Create a field for informational text
-    st.write("Informational text area. Describe KM plots :chart_with_downwards_trend:, GSVA :notebook: and what to do on this webpage.")
+    st.write("Describe KM plots, GSVA and what to do on this webpage...")
 
     # Apply the CSS to change the color of the multiselect tags etc.
-    change_multiselect_colours("#4A9661", "gray")
+    change_multiselect_colours("#4A9661")
     # Apply the CSS to change the color of the button and outline on hover and active
     customize_buttons(
         initial_bg_color="white", 
@@ -199,13 +200,11 @@ def main():
     # Locate all gene names in a list
     gene_names = df['gene'].unique()
 
-    # Initialize variables
-    genes_entered = ["ABC"]
-    cancer_types_entered = ["DEF"]
-    cut_point_entered = "blank"
-
     # Create a form for data input
     with st.form("km_plot_form", clear_on_submit=False):
+        # Create a placeholder for form validation error correction
+        form_validation_placeholder = st.empty()
+        
         # Multiselect element for gene selection
         genes_entered = st.multiselect(
             "Gene Names:",
@@ -236,7 +235,7 @@ def main():
         )
         
         # Submit button
-        submit_button = st.form_submit_button("Create KM Plot", on_click=handle_submit)
+        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
 
     with st.container():
         gsva_placeholder = st.empty()
