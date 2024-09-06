@@ -3,32 +3,105 @@ import streamlit as st
 from streamlit_tags import st_tags
 import pandas as pd
 import kaplanmeier as km
+import matplotlib.pyplot as plt # TESTING for image export of KM plots
+from datetime import datetime # TESTING for filename saving
 
 # ------------------ DATA ------------------
 # Cache the dataframe using st.cache_data decorator
 @st.cache_data
 # Function to read in the RNA & ID/Gene mapping tsv files
 def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_filename):
-    # RNA matrix 
-    # df = pd.read_csv(filename, sep='\t')
+    # Load in the RNA matrix 
     df = pd.read_parquet(rna_filename)
-    # ID/Gene Mapping file
+    
+    # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
     mapping = pd.read_csv(gene_mapping_filename, sep='\t')
     mapping.rename(columns={'id': 'xena_sample'}, inplace=True) # rename column to merge on
     merged_df = pd.merge(df, mapping, on='xena_sample', how='left')
 
+    # Load in survival and phenotype dataframes
     survival_df = pd.read_parquet(survival_filename)
     phenotype_df = pd.read_parquet(phenotype_filename)
+
+    # Create a list of all samples in each dataframe
+    samples_rna = list(merged_df.columns)
+    samples_pheno = list(phenotype_df['sample'].values)
+    samples_survival = list(survival_df['sample'].values)
     
-    return merged_df, survival_df, phenotype_df
+    # Find all common samples in all three lists
+    common_samples = list(set(samples_rna) & set(samples_pheno) & set(samples_survival))
+    
+    # Subset and reorder all three datasets by common_samples
+    merged_filtered_df = merged_df[common_samples] # Filter merged_df by columns in common_samples
+    phenotype_filtered_df = phenotype_df[phenotype_df['sample'].isin(common_samples)]
+    survival_filtered_df = survival_df[survival_df['sample'].isin(common_samples)]
+    
+    # Reorder phenotype and survival dataframes to match the columns of the rna matrix
+    column_order = list(merged_filtered_df.columns)
+    phenotype_filtered_ordered_df = phenotype_filtered_df.set_index('sample').loc[column_order].reset_index()
+    survival_filtered_ordered_df = survival_filtered_df.set_index('sample').loc[column_order].reset_index()
+    
+    return merged_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
 
 
 # ------------------ HELPER FUNCTIONS ------------------
-def handle_submit(genes_entered):
-    # TODO: If there are genes entered, display the kaplan meier plot and submit
-    if genes_entered:
-        print("submitted")
+def handle_submit():
+    # If the entire form is filled out, calculate GSVA, display the kaplan meier plot and submit
+    if validate_form():
+        # TODO: Calculate GSVA
+        calculate_gsva()
+        # TODO: Display the kaplan meier plot and submit
+        create_km_plot()
+        # TODO: Create two buttons to download output (GSVA and KM plot)
+        # download_output()
+        st.session_state.form_submitted = True  # Mark the form as submitted
+        print("Evaluating to true - validated & submitted")
+    else:
+        print("Evaluating to false - not submitted")
 
+# TODO: Function to calculate GSVA scores
+def calculate_gsva():
+    # Use state sessions to get form values
+    genes_entered = st.session_state.get('genes_entered', '')
+    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
+    cut_point_entered = st.session_state.get('cut_point_entered', '')
+    print("calculating the gsva")
+
+# TODO: Function to display the Kaplan Meier plot
+def create_km_plot():
+    print("TODO: create and display km plot")
+
+# TODO: Function to download the GSVA data to CSV file, and KM plot to PNG
+def download_output():
+    # Get the current date and time for file naming
+    today = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    
+    # GSVA export
+    # Transform GSVA data into CSV format
+    gsva = {'col1': [1, 2], 'col2': [3, 4]}
+    gsva_df = pd.DataFrame(data=gsva)
+    gsva_df_csv = gsva_df.to_csv(f'gsva_{today}.csv', index=False)
+
+    # TESTING -- KM plot export
+    plt.plot([1, 2, 3], [1, 4, 9])
+    plt.savefig(f'km_plot_{today}.png')
+
+
+# Function to check if all data fields were filled out
+def validate_form():
+    # Use state sessions to get form values
+    genes_entered = st.session_state.get('genes_entered', '')
+    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
+    cut_point_entered = st.session_state.get('cut_point_entered', '')
+    
+    # If all form fields filled out, return True, else False
+    if genes_entered and cancer_types_entered and cut_point_entered:
+        return True
+    else:
+        return False
+
+
+# ------------------ STYLING FUNCTIONS ------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
 def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
     tag_css = f"""
@@ -51,27 +124,27 @@ def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
     st.markdown(outline_css, unsafe_allow_html=True)
 
 
-def customize_submit_button(initial_bg_color: str, initial_outline_color: str, initial_text_color: str,
+def customize_buttons(initial_bg_color: str, initial_outline_color: str, initial_text_color: str,
                             hover_bg_color: str, hover_outline_color: str,
                             active_bg_color: str, active_outline_color: str) -> None:
     css = f"""
     <style>
     /* Initial button style */
-    div.stButton > button {{
+    div.stButton > button, div.stFormSubmitButton > button {{
         background-color: {initial_bg_color} !important;
         border-color: {initial_outline_color} !important;
         color: {initial_text_color} !important;
     }}
     
     /* Button hover effect */
-    div.stButton > button:hover {{
+    div.stButton > button:hover, div.stFormSubmitButton > button:hover {{
         background-color: {hover_bg_color} !important;
         border-color: {hover_outline_color} !important;
         color: white !important;
     }}
 
     /* Button active effect */
-    div.stButton > button:active {{
+    div.stButton > button:active, div.stFormSubmitButton > button:active {{
         background-color: {active_bg_color} !important;
         border-color: {active_outline_color} !important;
         color: white !important;
@@ -80,91 +153,82 @@ def customize_submit_button(initial_bg_color: str, initial_outline_color: str, i
     """
     st.markdown(css, unsafe_allow_html=True)
 
-# Function to create a downloadable csv of GSVA data
-@st.cache_data
-def convert_gsva_df(df):
-    # IMPORTANT: Cache the conversion to prevent computation on every rerun
-    return df.to_csv().encode("utf-8")
-
-# Function to calculate GSVA scores
-def calculate_gsva():
-    if genes_entered:
-        # TODO: calculate the gsva
-        print("calculating the gsva")
-    # Genes need to be entered first
-    else:
-        # TODO: display an error message and clear the dropdown selection
-        st.write("ENTER GENE NAMES FIRST PLEASE")
-        
-
     
 # ------------------ APP ------------------
-def main():
+def main():    
     # App title
     st.title("SURVIVAL ANALYSIS")
     st.divider()
     
     # Create a field for informational text
-    st.write("Informational text area")
+    st.subheader("Informational text area. Describe KM plots :chart_with_downwards_trend:, GSVA :notebook: and what to do on this webpage.")
 
     # Call the load data method
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
                                               './data/gencode.v22.annotation.gene.probeMap',
                                               './data/GDC-PANCAN.survival.parquet', 
                                               './data/GDC-PANCAN.basic_phenotype.parquet')
-    # df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.tsv', './data/gencode.v22.annotation.gene.probeMap')
     
     # Locate all gene names in a list
     gene_names = df['gene'].unique()
+
+    # Initialize variables
+    genes_entered = ["ABC"]
+    cancer_types_entered = ["DEF"]
+    cut_point_entered = "blank"
+
+    with st.form("km_plot_form", clear_on_submit=False):
+        # Multiselect element for gene selection
+        genes_entered = st.multiselect(
+            "Gene Names:",
+            gene_names,
+            placeholder="Enter gene names",
+            key='genes_entered',
+        )
+        
+        # Dropdown for cancer type
+        cancer_types = phenotype_df['project_id'].unique()
+        # TODO: what to do with "None" project_id's?
+        # TODO: add a PAN-Cancer option for all cancers?
+        cancer_types_entered = st.multiselect(
+            "Cancer Type:",
+            (cancer_types),
+            placeholder="Select cancer type",
+            key='cancer_types_entered',
+            # on_change=calculate_gsva,
+        )
     
-    # Multiselect element for gene selection
-    genes_entered = st.multiselect(
-        "Gene Names:",
-        gene_names,
-        placeholder="Enter gene names",
-    )
-
-    # Dropdown for cancer type
-    cancer_types = phenotype_df['project_id'].unique()
-    cancer_type_entered = st.multiselect(
-        "Cancer Type:",
-        (cancer_types),
-        placeholder="Select cancer type",
-        on_change=calculate_gsva,
-    )
-
-    # # TODO: Calculate GSVA scores
-    # d = {'col1': [1, 2], 'col2': [3, 4]}
-    # df_gsva = pd.DataFrame(data=d)
+        # Dropdown for cut-point...
+        cut_point_entered = st.selectbox(
+            "Cut-Point:",
+            ("First value", "Second value", "Third value"),
+            index=None,
+            placeholder="Select cut-point...",
+            key='cut_point_entered',
+        )
     
-    # # Download button for GSVA output
-    # csv = convert_gsva_df(df_gsva)
-    # st.download_button(
-    #     label="Download GSVA data as CSV",
-    #     data=csv,
-    #     file_name="gsva.csv",
-    #     mime="text/csv",
-    # )
+        # Apply the CSS to change the color of the multiselect tags etc.
+        change_multiselect_colours("#4A9661", "gray")
+        # Apply the CSS to change the color of the button and outline on hover and active
+        customize_buttons(
+            initial_bg_color="white", 
+            initial_outline_color="#D5D6D8", 
+            initial_text_color="#31333F",
+            hover_bg_color="#1f77b4", 
+            hover_outline_color="#1f77b4",
+            active_bg_color="#5a9bd4", 
+            active_outline_color="#5a9bd4"
+        )
+        
+        # Submit button
+        submit_button = st.form_submit_button("Create KM Plot", on_click=handle_submit)
 
-    # # Dropdown for cutoff...
-    
+    download_results_placeholder = st.empty()
 
-    # Apply the CSS to change the color of the multiselect tags etc.
-    change_multiselect_colours("#4A9661", "gray")
-    # Apply the CSS to change the color of the button and outline on hover and active
-    customize_submit_button(
-        initial_bg_color="white", 
-        initial_outline_color="#D5D6D8", 
-        initial_text_color="#31333F",
-        hover_bg_color="#1f77b4", 
-        hover_outline_color="#1f77b4",
-        active_bg_color="#5a9bd4", 
-        active_outline_color="#5a9bd4"
-    )
-    
-    # Submit button
-    st.button("Submit", on_click=handle_submit, args=(genes_entered,))
-
+    # Conditionally display the new button after form submission
+    if st.session_state.get('form_submitted', False):
+        with download_results_placeholder:
+            st.button("Download GSVA & KM Plot Output", on_click=download_output)
 
 # ------------------ RUN THE APP ------------------
 if __name__ == "__main__":
