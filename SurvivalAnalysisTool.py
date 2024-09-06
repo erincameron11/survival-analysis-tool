@@ -108,6 +108,7 @@ def validate_form():
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
 def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
+    # Multiselect Tag colour CSS styling
     tag_css = f"""
     <style>
     .stMultiSelect div[data-baseweb="select"] span[data-baseweb="tag"] {{
@@ -118,16 +119,25 @@ def change_multiselect_colours(tag_colour: str, outline_colour: str) -> None:
     """
     st.markdown(tag_css, unsafe_allow_html=True)
 
-    outline_css = f"""
-    <style>
-    .stMultiSelect div[data-baseweb="select"]:focus-within > div {{
-        border-color: {outline_colour} !important;
-    }}
+    # Multiselect input outline CSS styling
+    st.markdown("""
+   <style>
+    /* Initial border color */
+    div[data-baseweb="select"] > div {
+        border: 0em solid white !important;
+        border-radius: 4px !important;
+        box-shadow: 0 0 0 2px white !important; /* Maintain custom box-shadow */
+    }
+    /* Outline color when focused */
+    div[data-baseweb="select"] > div:focus-within {
+        border: 0em solid gray;
+        box-shadow: 0 0 0 2px gray !important;  
+        border-color: gray !important;
+    }
     </style>
-    """
-    st.markdown(outline_css, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-
+# Function to customize the style of buttons
 def customize_buttons(initial_bg_color: str, initial_outline_color: str, initial_text_color: str,
                             hover_bg_color: str, hover_outline_color: str,
                             active_bg_color: str, active_outline_color: str) -> None:
@@ -165,7 +175,7 @@ def main():
     st.divider()
     
     # Create a field for informational text
-    st.subheader("Informational text area. Describe KM plots :chart_with_downwards_trend:, GSVA :notebook: and what to do on this webpage.")
+    st.write("Informational text area. Describe KM plots :chart_with_downwards_trend:, GSVA :notebook: and what to do on this webpage.")
 
     # Apply the CSS to change the color of the multiselect tags etc.
     change_multiselect_colours("#4A9661", "gray")
@@ -242,7 +252,7 @@ def main():
                 fig = create_km_plot()
                 st.pyplot(fig)
             with download_results_placeholder:
-                st.button("Download GSVA & KM Plot Output", on_click=download_output)
+                st.button(":arrow_down: Download Results", on_click=download_output)
 
 
 # ------------------------------------ RUN THE APP ------------------------------------
