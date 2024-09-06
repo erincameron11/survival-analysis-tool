@@ -4,8 +4,10 @@ from streamlit_tags import st_tags
 import pandas as pd
 import kaplanmeier as km
 import matplotlib.pyplot as plt # TESTING for image export of KM plots
+from GSVA import gsva
 from datetime import datetime # TESTING for filename saving
 import numpy as np # TESTING for st.pyplot
+import streamlit.components.v1 as components # TESTING for km plot page anchor
 
 # ------------------------------------ DATA ------------------------------------
 # Cache the dataframe using st.cache_data decorator
@@ -55,7 +57,6 @@ def handle_submit():
         create_km_plot()
         # Mark the form as submitted
         st.session_state.form_submitted = True
-        print("Form complete - validated & submitted")
     else:
         with form_validation_placeholder:
             st.write("Please fill in all input fields")
@@ -104,6 +105,9 @@ def download_output():
     # TESTING -- KM plot export
     plt.plot([1, 2, 3], [1, 4, 9])
     plt.savefig(f'km_plot_{today}.png')
+
+def anchor():
+    
 
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
@@ -228,9 +232,9 @@ def main():
         # Dropdown for cut-point
         cut_point_entered = st.selectbox(
             "Cut-Point:",
-            ("First value", "Second value", "Third value"),
+            ("Median", "Tertile - ALL", "Tertile - Top and Bottom only", "Quartile - ALL", "Quartile - Top and Bottom only"),
             index=None,
-            placeholder="Select cut-point...",
+            placeholder="Select cut-point",
             key='cut_point_entered',
         )
         
@@ -238,12 +242,22 @@ def main():
         submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
 
     with st.container():
+        km_plot_anchor_placeholder = st.empty()
         gsva_placeholder = st.empty()
         km_plot_placeholder = st.empty()
         download_results_placeholder = st.empty()
     
         # Conditionally display the results and download button after form submission
         if st.session_state.get('form_submitted', False):
+            with km_plot_anchor_placeholder:
+                st.header('', anchor='km_plot_anchor')
+                # Jump to the KM plot anchor using JavaScript
+                js_code = """
+                        <script>
+                            document.getElementById('km_plot_anchor').scrollIntoView({behavior: 'smooth'});
+                        </script>
+                        """
+                components.html(js_code)
             with gsva_placeholder:
                 st.write("GSVA OUTPUT HERE")
             with km_plot_placeholder:

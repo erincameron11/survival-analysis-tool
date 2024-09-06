@@ -10,7 +10,7 @@ Datasets were obtained from `UCSC Xena` GDC Pan-Cancer (PANCAN) cohort:
 * `pip install streamlit` -- For the UI of the application
 * `pip install pandas` -- For data analysis
 * `pip install numpy` -- For scientific computing
-* `pip install gseapy` -- For the GSVA calculation
+* `pip install GSVA` -- For the GSVA calculation
 * `pip install kaplanmeier` -- For the creation of a Kaplan Meier plot
 * `pip install matplotlib` -- For the output of the Kaplan Meier plot
 
