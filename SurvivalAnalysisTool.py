@@ -106,9 +106,6 @@ def download_output():
     plt.plot([1, 2, 3], [1, 4, 9])
     plt.savefig(f'km_plot_{today}.png')
 
-def anchor():
-    
-
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
@@ -241,31 +238,35 @@ def main():
         # Submit button
         submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
 
-    with st.container():
-        km_plot_anchor_placeholder = st.empty()
-        gsva_placeholder = st.empty()
-        km_plot_placeholder = st.empty()
-        download_results_placeholder = st.empty()
-    
-        # Conditionally display the results and download button after form submission
-        if st.session_state.get('form_submitted', False):
-            with km_plot_anchor_placeholder:
-                st.header('', anchor='km_plot_anchor')
-                # Jump to the KM plot anchor using JavaScript
-                js_code = """
-                        <script>
-                            document.getElementById('km_plot_anchor').scrollIntoView({behavior: 'smooth'});
-                        </script>
-                        """
-                components.html(js_code)
-            with gsva_placeholder:
-                st.write("GSVA OUTPUT HERE")
-            with km_plot_placeholder:
-                st.write("KM PLOT OUTPUT HERE")
-                fig = create_km_plot()
-                st.pyplot(fig)
-            with download_results_placeholder:
-                st.button(":arrow_down: Download Results", on_click=download_output)
+    if submit_button:
+        st.markdown(
+                    """
+                    <div style='text-align: center;'>
+                        <a href='#results' style='color: #1f77b4; text-decoration: none; font-size: 18px;'>
+                            View Results
+                        </a>
+                    </div>
+                    <div id='results' style='padding: 50px;'></div>
+                    """,
+                    unsafe_allow_html=True
+        )
+        with st.container(border=True):
+            km_plot_anchor_placeholder = st.empty()
+            gsva_placeholder = st.empty()
+            km_plot_placeholder = st.empty()
+            download_results_placeholder = st.empty()
+            
+            # Conditionally display the results and download button after form submission
+            if st.session_state.get('form_submitted', False):
+                with km_plot_anchor_placeholder:
+                    st.markdown("<div id='results'></div>", unsafe_allow_html=True)
+                with gsva_placeholder:
+                    st.write("GSVA OUTPUT HERE")
+                with km_plot_placeholder:
+                    fig = create_km_plot()
+                    st.pyplot(fig)
+                with download_results_placeholder:
+                    st.button(":arrow_down: Download Results", on_click=download_output)
 
 
 # ------------------------------------ RUN THE APP ------------------------------------
