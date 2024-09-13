@@ -57,10 +57,6 @@ def handle_submit(form_validation_placeholder):
         create_km_plot()
         # Mark the form as submitted
         st.session_state.form_submitted = True
-    else:
-        # with form_validation_placeholder:
-        #     st.write("Please fill in all input fields")
-        print("not submitted, please fill out all input fields")
 
 # Function to check if all data fields were filled out
 def validate_form():
@@ -126,38 +122,32 @@ def block_form_submit():
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
-def change_multiselect_colours(tag_colour: str) -> None:
-    # Multiselect Tag colour CSS styling
-    tag_css = f"""
-        <style>
-        .stMultiSelect div[data-baseweb="select"] span[data-baseweb="tag"] {{
-            background-color: {tag_colour} !important;
-            color: white !important;
-        }}
-        </style>
-    """
-    st.markdown(tag_css, unsafe_allow_html=True)
-
+def customize_multiselect_colours() -> None:
     # Multiselect input outline CSS styling
     st.markdown("""
        <style>
-        /* Initial border colour */
+        /* Multiselect initial border colour */
         div[data-baseweb="select"] > div {
             border: 0em solid white !important;
             border-radius: 4px !important;
             box-shadow: 0 0 0 1px white !important; /* Maintain custom box-shadow */
         }
-        /* Outline colour when focused */
+        /* Multiselect outline colour when focused */
         div[data-baseweb="select"] > div:focus-within {
             border: 0em solid #c4c1c1;
             box-shadow: 0 0 0 1px #c4c1c1 !important;  
             border-color: #c4c1c1 !important;
         }
+        /* Multiselect tag styling */
+        .stMultiSelect div[data-baseweb="select"] span[data-baseweb="tag"] {
+            background-color: #4A9661 !important;
+            color: white !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
 # Function to inject CSS and change the gene signature text input colours
-def change_text_input() -> None:
+def customize_text_input() -> None:
     # Text Input colour CSS styling    
     st.markdown("""
         <style>
@@ -174,45 +164,34 @@ def change_text_input() -> None:
         </style>
     """, unsafe_allow_html=True)
 
-    
-    
-
 # Function to customize the style of buttons
-def customize_buttons(initial_bg_colour: str, initial_outline_colour: str, initial_text_colour: str,
-                            hover_bg_colour: str, hover_outline_colour: str,
-                            active_bg_colour: str, active_outline_colour: str) -> None:
-    css = f"""
-    <style>
-    /* Initial button style */
-    div.stButton > button, div.stFormSubmitButton > button {{
-        background-color: {initial_bg_colour} !important;
-        border-color: {initial_outline_colour} !important;
-        color: {initial_text_colour} !important;
-    }}
-    
-    /* Button hover effect */
-    div.stButton > button:hover, div.stFormSubmitButton > button:hover {{
-        background-color: {hover_bg_colour} !important;
-        border-color: {hover_outline_colour} !important;
-        color: white !important;
-    }}
-
-    /* Button active effect */
-    div.stButton > button:active, div.stFormSubmitButton > button:active {{
-        background-color: {active_bg_colour} !important;
-        border-color: {active_outline_colour} !important;
-        color: white !important;
-    }}
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
+def customize_buttons() -> None:
+    st.markdown("""
+        <style>
+        /* Initial button style */
+        div.stButton > button, div.stFormSubmitButton > button {
+            background-color: white !important;
+            border-color: #D5D6D8 !important;
+            color: #31333F !important;
+        }
+        /* Button hover effect */
+        div.stButton > button:hover, div.stFormSubmitButton > button:hover {
+            background-color: #1f77b4 !important;
+            border-color: #1f77b4 !important;
+            color: white !important;
+        }
+        /* Button active effect */
+        div.stButton > button:active, div.stFormSubmitButton > button:active {
+            background-color: #5a9bd4 !important;
+            border-color: #5a9bd4 !important;
+            color: white !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     
 # ------------------------------------ APP ------------------------------------
 def main():  
-    # Set the valid form flag
-    valid_form = False
-    
     # App title
     st.title("SURVIVAL ANALYSIS")
     st.divider()
@@ -228,7 +207,7 @@ def main():
     
     # Locate all gene names in a list
     gene_names = df['gene'].unique()
-
+    
     # Create a form for data input
     with st.form("km_plot_form", clear_on_submit=False):
         # Create a placeholder for form validation error correction
@@ -247,7 +226,6 @@ def main():
         
         # Dropdown for cancer type
         cancer_types = phenotype_df['project_id'].unique()
-        # TODO: what to do with "None" project_id's?
         # TODO: add a PAN-Cancer option for all cancers?
         cancer_types_entered = st.multiselect(
             "Cancer Type:",
@@ -269,8 +247,19 @@ def main():
         # Submit button
         submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit, args=(form_validation_placeholder,))
 
+        # If the submit button was clicked, check that all fields are filled in
         if submit_button:
+           
+            # TESTING - grab the signature_name, and genes_entered
+            # components.html(f"""
+            # <script>
+            #     console.log("{signature_name}: {genes_entered}");
+            # </script>
+            # """)
+            
+            # If not all fields are filled in
             if not signature_name or not genes_entered or not cancer_types_entered or not cut_point_entered:
+                # Display red text form validation
                 with form_validation_placeholder:
                     st.markdown("""
                         <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
@@ -281,21 +270,10 @@ def main():
     # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
     block_form_submit()
 
-    # Apply the CSS to change the colour of the multiselect tags etc.
-    change_multiselect_colours("#4A9661")
-    
-    # Apply the CSS to change the colour of the button and outline on hover and active
-    customize_buttons(
-        initial_bg_colour="white", 
-        initial_outline_colour="#D5D6D8", 
-        initial_text_colour="#31333F",
-        hover_bg_colour="#1f77b4", 
-        hover_outline_colour="#1f77b4",
-        active_bg_colour="#5a9bd4", 
-        active_outline_colour="#5a9bd4"
-    )
-    # Apply the CSS to change the colour of the text inputs
-    change_text_input()
+    # Apply CSS for custom styling
+    customize_multiselect_colours()
+    customize_buttons()
+    customize_text_input()
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
