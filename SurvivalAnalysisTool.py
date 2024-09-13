@@ -48,7 +48,7 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
 
 
 # ------------------------------------ HELPER FUNCTIONS ------------------------------------
-def handle_submit():
+def handle_submit(form_validation_placeholder):
     # If the entire form is filled out, calculate GSVA, display the kaplan meier plot and submit
     if validate_form():
         # Calculate GSVA
@@ -58,9 +58,9 @@ def handle_submit():
         # Mark the form as submitted
         st.session_state.form_submitted = True
     else:
-        with form_validation_placeholder:
-            st.write("Please fill in all input fields")
-        print("Form not complete - not submitted")
+        # with form_validation_placeholder:
+        #     st.write("Please fill in all input fields")
+        print("not submitted, please fill out all input fields")
 
 # Function to check if all data fields were filled out
 def validate_form():
@@ -71,8 +71,10 @@ def validate_form():
     
     # If all form fields filled out, return True, else False
     if genes_entered and cancer_types_entered and cut_point_entered:
+        valid_form = True
         return True
     else:
+        valid_form = False
         return False
 
 # TODO: Function to calculate GSVA scores
@@ -106,63 +108,99 @@ def download_output():
     plt.plot([1, 2, 3], [1, 4, 9])
     plt.savefig(f'km_plot_{today}.png')
 
+# Function to block the form from submitting on Enter press with text_input (built-in streamlit functionality)
+def block_form_submit():
+    components.html("""
+    <script>
+        const inputs = window.parent.document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                }
+            });
+        });
+        </script>
+    """, height=0)
+
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to inject CSS and change the gene multiselect tag colours to green once entered
 def change_multiselect_colours(tag_colour: str) -> None:
     # Multiselect Tag colour CSS styling
     tag_css = f"""
-    <style>
-    .stMultiSelect div[data-baseweb="select"] span[data-baseweb="tag"] {{
-        background-color: {tag_colour} !important;
-        color: white !important;
-    }}
-    </style>
+        <style>
+        .stMultiSelect div[data-baseweb="select"] span[data-baseweb="tag"] {{
+            background-color: {tag_colour} !important;
+            color: white !important;
+        }}
+        </style>
     """
     st.markdown(tag_css, unsafe_allow_html=True)
 
     # Multiselect input outline CSS styling
     st.markdown("""
-   <style>
-    /* Initial border color */
-    div[data-baseweb="select"] > div {
-        border: 0em solid white !important;
-        border-radius: 4px !important;
-        box-shadow: 0 0 0 1px white !important; /* Maintain custom box-shadow */
-    }
-    /* Outline color when focused */
-    div[data-baseweb="select"] > div:focus-within {
-        border: 0em solid #c4c1c1;
-        box-shadow: 0 0 0 1px #c4c1c1 !important;  
-        border-color: #c4c1c1 !important;
-    }
-    </style>
+       <style>
+        /* Initial border colour */
+        div[data-baseweb="select"] > div {
+            border: 0em solid white !important;
+            border-radius: 4px !important;
+            box-shadow: 0 0 0 1px white !important; /* Maintain custom box-shadow */
+        }
+        /* Outline colour when focused */
+        div[data-baseweb="select"] > div:focus-within {
+            border: 0em solid #c4c1c1;
+            box-shadow: 0 0 0 1px #c4c1c1 !important;  
+            border-color: #c4c1c1 !important;
+        }
+        </style>
     """, unsafe_allow_html=True)
 
+# Function to inject CSS and change the gene signature text input colours
+def change_text_input() -> None:
+    # Text Input colour CSS styling    
+    st.markdown("""
+        <style>
+        /* Change the outline styling for text_inputs */
+        .stTextInput > div[class]:focus-within {
+            border-bottom-color: #c4c1c1 !important;
+            border-top-color: #c4c1c1 !important;
+            border-left-color: #c4c1c1 !important;
+            border-right-color: #c4c1c1 !important;
+        }
+        [data-testid="InputInstructions"] { 
+            display: None;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    
+    
+
 # Function to customize the style of buttons
-def customize_buttons(initial_bg_color: str, initial_outline_color: str, initial_text_color: str,
-                            hover_bg_color: str, hover_outline_color: str,
-                            active_bg_color: str, active_outline_color: str) -> None:
+def customize_buttons(initial_bg_colour: str, initial_outline_colour: str, initial_text_colour: str,
+                            hover_bg_colour: str, hover_outline_colour: str,
+                            active_bg_colour: str, active_outline_colour: str) -> None:
     css = f"""
     <style>
     /* Initial button style */
     div.stButton > button, div.stFormSubmitButton > button {{
-        background-color: {initial_bg_color} !important;
-        border-color: {initial_outline_color} !important;
-        color: {initial_text_color} !important;
+        background-color: {initial_bg_colour} !important;
+        border-color: {initial_outline_colour} !important;
+        color: {initial_text_colour} !important;
     }}
     
     /* Button hover effect */
     div.stButton > button:hover, div.stFormSubmitButton > button:hover {{
-        background-color: {hover_bg_color} !important;
-        border-color: {hover_outline_color} !important;
+        background-color: {hover_bg_colour} !important;
+        border-color: {hover_outline_colour} !important;
         color: white !important;
     }}
 
     /* Button active effect */
     div.stButton > button:active, div.stFormSubmitButton > button:active {{
-        background-color: {active_bg_color} !important;
-        border-color: {active_outline_color} !important;
+        background-color: {active_bg_colour} !important;
+        border-color: {active_outline_colour} !important;
         color: white !important;
     }}
     </style>
@@ -171,26 +209,16 @@ def customize_buttons(initial_bg_color: str, initial_outline_color: str, initial
 
     
 # ------------------------------------ APP ------------------------------------
-def main():    
+def main():  
+    # Set the valid form flag
+    valid_form = False
+    
     # App title
     st.title("SURVIVAL ANALYSIS")
     st.divider()
     
     # Create a field for informational text
-    st.write("Describe KM plots, GSVA and what to do on this webpage...")
-
-    # Apply the CSS to change the color of the multiselect tags etc.
-    change_multiselect_colours("#4A9661")
-    # Apply the CSS to change the color of the button and outline on hover and active
-    customize_buttons(
-        initial_bg_color="white", 
-        initial_outline_color="#D5D6D8", 
-        initial_text_color="#31333F",
-        hover_bg_color="#1f77b4", 
-        hover_outline_color="#1f77b4",
-        active_bg_color="#5a9bd4", 
-        active_outline_color="#5a9bd4"
-    )
+    # st.write("Describe KM plots, GSVA and what to do on this webpage...")
 
     # Call the load data method
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
@@ -205,6 +233,9 @@ def main():
     with st.form("km_plot_form", clear_on_submit=False):
         # Create a placeholder for form validation error correction
         form_validation_placeholder = st.empty()
+
+        # Text input field for custom signature name
+        signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name")
         
         # Multiselect element for gene selection
         genes_entered = st.multiselect(
@@ -236,39 +267,65 @@ def main():
         )
         
         # Submit button
-        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
+        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit, args=(form_validation_placeholder,))
 
-    if submit_button:
-        st.markdown(
-                    """
-                    <div style='text-align: center;'>
-                        <a href='#results' style='color: #1f77b4; text-decoration: none; font-size: 18px;'>
-                            View Results
-                        </a>
-                    </div>
-                    <div id='results' style='padding: 50px;'></div>
-                    """,
-                    unsafe_allow_html=True
-        )
+        if submit_button:
+            if not signature_name or not genes_entered or not cancer_types_entered or not cut_point_entered:
+                with form_validation_placeholder:
+                    st.markdown("""
+                        <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
+                    """, unsafe_allow_html=True)
+    
+    # TODO: IF GSVA TAKES TOO LONG TO PROCESS, CONSIDER USING st.status WHILE LOADING RESULTS
+
+    # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
+    block_form_submit()
+
+    # Apply the CSS to change the colour of the multiselect tags etc.
+    change_multiselect_colours("#4A9661")
+    
+    # Apply the CSS to change the colour of the button and outline on hover and active
+    customize_buttons(
+        initial_bg_colour="white", 
+        initial_outline_colour="#D5D6D8", 
+        initial_text_colour="#31333F",
+        hover_bg_colour="#1f77b4", 
+        hover_outline_colour="#1f77b4",
+        active_bg_colour="#5a9bd4", 
+        active_outline_colour="#5a9bd4"
+    )
+    # Apply the CSS to change the colour of the text inputs
+    change_text_input()
+
+    # If the submit button was pressed and submitted successfully
+    if st.session_state.get('form_submitted', False):
+        # Display a View Results anchor element
+        st.markdown("""
+            <div style='text-align: center;'>
+                <a href='#results' style='color: #1f77b4; text-decoration: none; font-size: 18px;'>↓ View Results ↓</a>
+            </div>
+            <div id='results' style='padding: 50px;'></div>
+        """, unsafe_allow_html=True)
+        
+        # Display the results
         with st.container(border=True):
             km_plot_anchor_placeholder = st.empty()
             gsva_placeholder = st.empty()
             km_plot_placeholder = st.empty()
             download_results_placeholder = st.empty()
-            
-            # Conditionally display the results and download button after form submission
-            if st.session_state.get('form_submitted', False):
-                with km_plot_anchor_placeholder:
-                    st.markdown("<div id='results'></div>", unsafe_allow_html=True)
-                with gsva_placeholder:
-                    st.write("GSVA OUTPUT HERE")
-                with km_plot_placeholder:
-                    fig = create_km_plot()
-                    st.pyplot(fig)
-                with download_results_placeholder:
-                    st.button(":arrow_down: Download Results", on_click=download_output)
+            with km_plot_anchor_placeholder:
+                st.markdown("<div id='results'></div>", unsafe_allow_html=True)
+            with gsva_placeholder:
+                # TODO: Display GSVA output
+                st.write("GSVA OUTPUT HERE")
+            with km_plot_placeholder:
+                # TODO: Display KM plot
+                fig = create_km_plot()
+                st.pyplot(fig)
+            with download_results_placeholder:
+                st.button(":arrow_down: Download Results", on_click=download_output)
 
-
+    
 # ------------------------------------ RUN THE APP ------------------------------------
 if __name__ == "__main__":
     main()
