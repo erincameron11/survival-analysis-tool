@@ -8,6 +8,7 @@ from GSVA import gsva
 from datetime import datetime # TESTING for filename saving
 import numpy as np # TESTING for st.pyplot
 import streamlit.components.v1 as components # TESTING for km plot page anchor
+import time # TESTING page anchor scrolling
 
 # ------------------------------------ DATA ------------------------------------
 # Cache the dataframe using st.cache_data decorator
@@ -121,7 +122,7 @@ def block_form_submit():
 
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
-# Function to inject CSS and change the gene multiselect tag colours to green once entered
+Function to inject CSS and change the gene multiselect tag colours to green once entered
 def customize_multiselect_colours() -> None:
     # Multiselect input outline CSS styling
     st.markdown("""
@@ -200,6 +201,14 @@ def customize_buttons() -> None:
     
 # ------------------------------------ APP ------------------------------------
 def main():  
+    # Define JavaScript code for auto-scroll to the results section
+    scroll_js = '''
+        <script>
+            console.log(window.parent.document.querySelector(".main"));
+            window.parent.document.querySelector(".main").scrollTo({top: 500, behavior: 'smooth'});
+        </script>
+        '''
+
     # App title
     st.title("SURVIVAL ANALYSIS")
     st.divider()
@@ -254,17 +263,9 @@ def main():
         
         # Submit button
         submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit, args=(form_validation_placeholder,))
-
+        
         # If the submit button was clicked, check that all fields are filled in
         if submit_button:
-           
-            # TESTING - grab the signature_name, and genes_entered
-            # components.html(f"""
-            # <script>
-            #     console.log("{signature_name}: {genes_entered}");
-            # </script>
-            # """)
-            
             # If not all fields are filled in
             if not signature_name or not genes_entered or not cancer_types_entered or not cut_point_entered:
                 # Display red text form validation
@@ -285,22 +286,15 @@ def main():
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
-        # Display a View Results anchor element
-        st.markdown("""
-            <div style='text-align: center;'>
-                <a href='#results' style='color: #1f77b4; text-decoration: none; font-size: 18px;'>↓ View Results ↓</a>
-            </div>
-            <div id='results' style='padding: 50px;'></div>
-        """, unsafe_allow_html=True)
+        # Define an empty element for scrolling to results
+        scroll_temp = st.empty()
         
         # Display the results
         with st.container(border=True):
-            km_plot_anchor_placeholder = st.empty()
+            st.subheader("Results")
             gsva_placeholder = st.empty()
             km_plot_placeholder = st.empty()
             download_results_placeholder = st.empty()
-            with km_plot_anchor_placeholder:
-                st.markdown("<div id='results'></div>", unsafe_allow_html=True)
             with gsva_placeholder:
                 # TODO: Display GSVA output
                 st.write("GSVA OUTPUT HERE")
@@ -310,6 +304,11 @@ def main():
                 st.pyplot(fig)
             with download_results_placeholder:
                 st.button(":arrow_down: Download Results", on_click=download_output)
+            # Add in auto-scroll behaviour
+            with scroll_temp:
+                st.components.v1.html(scroll_js, height=0)
+                time.sleep(.5) # Ensure the script can execute before being deleted
+            scroll_temp.empty()
 
     
 # ------------------------------------ RUN THE APP ------------------------------------
