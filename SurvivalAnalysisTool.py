@@ -161,6 +161,14 @@ def customize_text_input() -> None:
         [data-testid="InputInstructions"] { 
             display: None;
         }
+        /* Change the placeholder text opacity */
+        .stTextInput > div > div > input::placeholder {
+            opacity: 1.0;
+        }
+        /* Change the input field border radius */
+        .stTextInput > div {
+            border-radius: 4px;
+        }
         </style>
     """, unsafe_allow_html=True)
 
