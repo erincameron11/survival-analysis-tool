@@ -56,13 +56,13 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
 
 
 # ------------------------------------ HELPER FUNCTIONS ------------------------------------
-def handle_submit(form_validation_placeholder):
+def handle_submit():
     # If the entire form is filled out, calculate GSVA, display the kaplan meier plot and submit
     if validate_form():
-        # Calculate GSVA
-        calculate_gsva()
-        # Display the kaplan meier plot
-        create_km_plot()
+        # # Calculate GSVA
+        # calculate_gsva()
+        # # Display the kaplan meier plot
+        # create_km_plot()
         # Mark the form as submitted
         st.session_state.form_submitted = True
 
@@ -82,21 +82,24 @@ def validate_form():
         return False
 
 # TODO: Function to calculate GSVA scores
-def calculate_gsva():
+def calculate_gsva(df):
     # Use state sessions to get form values
+    signature_name = st.session_state.get('signature_name', '')
     genes_entered = st.session_state.get('genes_entered', '')
     cancer_types_entered = st.session_state.get('cancer_types_entered', '')
     cut_point_entered = st.session_state.get('cut_point_entered', '')
+
+    # Create a dictionary of signature and gene names
+    signature = {signature_name: genes_entered}
     
-    # # Determine the number of threads to run the calculations on
-    # n_threads=threading.active_count()-1
+    # Determine the number of threads to run the calculations on
+    n_threads=threading.active_count()-1
     
-    # # Calculate the GSVA scores
-    # ss = gp.ssgsea(data=merged_trimmed_df, gene_sets=signature, outdir=None, 
-    #            sample_norm_method='rank', threads=n_threads, min_size=2, 
-    #            verbose=True)
-    
-    print("calculating the gsva")
+    # Calculate the GSVA scores
+    scores = gp.ssgsea(data=df, gene_sets=signature, outdir=None, 
+               sample_norm_method='rank', threads=n_threads, min_size=2, 
+               verbose=True)
+    return scores
 
 # TODO: Function to display the Kaplan Meier plot
 def create_km_plot():
@@ -278,7 +281,7 @@ def main():
         )
         
         # Submit button
-        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit, args=(form_validation_placeholder,))
+        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
         
         # If the submit button was clicked, check that all fields are filled in
         if submit_button:
@@ -302,6 +305,11 @@ def main():
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
+        # Calculate GSVA
+        gsva = calculate_gsva(df)
+        # Display the kaplan meier plot
+        km_plot = create_km_plot()
+        
         # Define an empty element for scrolling to results
         scroll_temp = st.empty()
         
@@ -326,7 +334,7 @@ def main():
             download_results_placeholder = st.empty()
             with gsva_placeholder:
                 # TODO: Display GSVA output
-                st.write("GSVA OUTPUT HERE")
+                st.write(gsva.res2d.head())
             with km_plot_placeholder:
                 # TODO: Display KM plot
                 fig = create_km_plot()
