@@ -9,6 +9,8 @@ from datetime import datetime # TESTING for filename saving
 import numpy as np # TESTING for st.pyplot
 import streamlit.components.v1 as components # TESTING for km plot page anchor
 import time # TESTING page anchor scrolling
+import gseapy as gp # for GSVA calculation
+import threading # for GSVA calculation
 
 # ------------------------------------ DATA ------------------------------------
 # Cache the dataframe using st.cache_data decorator
@@ -21,14 +23,19 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
     # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
     mapping = pd.read_csv(gene_mapping_filename, sep='\t')
     mapping.rename(columns={'id': 'xena_sample'}, inplace=True) # rename column to merge on
-    merged_df = pd.merge(df, mapping, on='xena_sample', how='left')
+    merged_df = pd.merge(mapping, df, on='xena_sample', how='outer', indicator=True) # merge the dataframes to map gene names
 
+    # Ensure the expression dataframe is in the format: indexed on gene names column labels as sample ids
+    merged_trimmed_df = merged_df
+    merged_trimmed_df.drop(columns=['xena_sample', 'chrom', 'chromStart', 'chromEnd', 'strand', '_merge'], axis=1, inplace=True)
+    merged_trimmed_df.set_index('gene', inplace=True)
+    
     # Load in survival and phenotype dataframes
     survival_df = pd.read_parquet(survival_filename)
     phenotype_df = pd.read_parquet(phenotype_filename)
 
     # Create a list of all samples in each dataframe
-    samples_rna = list(merged_df.columns)
+    samples_rna = list(merged_trimmed_df.columns)
     samples_pheno = list(phenotype_df['sample'].values)
     samples_survival = list(survival_df['sample'].values)
     
@@ -36,16 +43,16 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
     common_samples = list(set(samples_rna) & set(samples_pheno) & set(samples_survival))
     
     # Subset and reorder all three datasets by common_samples
-    merged_filtered_df = merged_df[common_samples] # Filter merged_df by columns in common_samples
+    merged_trimmed_filtered_df = merged_trimmed_df[common_samples] # Filter merged_df by columns in common_samples
     phenotype_filtered_df = phenotype_df[phenotype_df['sample'].isin(common_samples)]
     survival_filtered_df = survival_df[survival_df['sample'].isin(common_samples)]
     
     # Reorder phenotype and survival dataframes to match the columns of the rna matrix
-    column_order = list(merged_filtered_df.columns)
+    column_order = list(merged_trimmed_filtered_df.columns)
     phenotype_filtered_ordered_df = phenotype_filtered_df.set_index('sample').loc[column_order].reset_index()
     survival_filtered_ordered_df = survival_filtered_df.set_index('sample').loc[column_order].reset_index()
     
-    return merged_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
+    return merged_trimmed_filtered_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
 
 
 # ------------------------------------ HELPER FUNCTIONS ------------------------------------
@@ -80,6 +87,15 @@ def calculate_gsva():
     genes_entered = st.session_state.get('genes_entered', '')
     cancer_types_entered = st.session_state.get('cancer_types_entered', '')
     cut_point_entered = st.session_state.get('cut_point_entered', '')
+    
+    # # Determine the number of threads to run the calculations on
+    # n_threads=threading.active_count()-1
+    
+    # # Calculate the GSVA scores
+    # ss = gp.ssgsea(data=merged_trimmed_df, gene_sets=signature, outdir=None, 
+    #            sample_norm_method='rank', threads=n_threads, min_size=2, 
+    #            verbose=True)
+    
     print("calculating the gsva")
 
 # TODO: Function to display the Kaplan Meier plot
@@ -122,7 +138,7 @@ def block_form_submit():
 
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
-Function to inject CSS and change the gene multiselect tag colours to green once entered
+# Function to inject CSS and change the gene multiselect tag colours to green once entered
 def customize_multiselect_colours() -> None:
     # Multiselect input outline CSS styling
     st.markdown("""
@@ -221,9 +237,9 @@ def main():
                                               './data/gencode.v22.annotation.gene.probeMap',
                                               './data/GDC-PANCAN.survival.parquet', 
                                               './data/GDC-PANCAN.basic_phenotype.parquet')
-    
+
     # Locate all gene names in a list
-    gene_names = df['gene'].unique()
+    gene_names = df.index.unique()
     
     # Create a form for data input
     with st.form("km_plot_form", clear_on_submit=False):
@@ -231,7 +247,7 @@ def main():
         form_validation_placeholder = st.empty()
 
         # Text input field for custom signature name
-        signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name")
+        signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name", key='signature_name')
         
         # Multiselect element for gene selection
         genes_entered = st.multiselect(
@@ -292,6 +308,19 @@ def main():
         # Display the results
         with st.container(border=True):
             st.subheader("Results")
+
+            # Use state sessions to get form values
+            signature_name = st.session_state.get('signature_name', '')
+            genes_entered = st.session_state.get('genes_entered', '')
+            cancer_types_entered = st.session_state.get('cancer_types_entered', '')
+            cut_point_entered = st.session_state.get('cut_point_entered', '')
+            # Display the entered form values
+            genes_entered_str = ", ".join(genes_entered)
+            cancer_types_entered_str = ", ".join(cancer_types_entered)
+            st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
+            st.divider()
+
+            # Create placeholders to hold the gsva and km plot content
             gsva_placeholder = st.empty()
             km_plot_placeholder = st.empty()
             download_results_placeholder = st.empty()
