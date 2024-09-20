@@ -1,16 +1,18 @@
 # Import statements
-import streamlit as st
-from streamlit_tags import st_tags
-import pandas as pd
+import streamlit as st # for UI
+# from streamlit_tags import st_tags
+import pandas as pd # for data set analysis and manipulation
 import kaplanmeier as km
 import matplotlib.pyplot as plt # TESTING for image export of KM plots
-from GSVA import gsva
-from datetime import datetime # TESTING for filename saving
+# from GSVA import gsva
+from datetime import datetime # for file naming convention for exports
 import numpy as np # TESTING for st.pyplot
 import streamlit.components.v1 as components # TESTING for km plot page anchor
-import time # TESTING page anchor scrolling
+import time # for page anchor scrolling
 import gseapy as gp # for GSVA calculation
-import threading # for GSVA calculation
+import threading # for accelerating the GSVA calculation
+import os # TESTING -- for km plot downloading
+from pathlib import Path # TESTING -- for km plot downloading
 
 # ------------------------------------ DATA ------------------------------------
 # Cache the dataframe using st.cache_data decorator
@@ -101,13 +103,20 @@ def calculate_gsva(df):
                verbose=True)
     return scores
 
-# TODO: Function to display the Kaplan Meier plot
-def create_km_plot():
-    # TESTING -- create and show KM plot
-    arr = np.random.normal(1, 1, size=100)
-    fig, ax = plt.subplots()
-    ax.hist(arr, bins=20)
-    return fig
+# TODO: Function to create the Kaplan Meier plot
+def create_km_plot(path):
+    # Create and show KM plot
+    # TESTING -- Example dataframe from kaplanmeier package
+    example_df = km.example_data()
+    # Kaplan-Meier fit
+    time_event = example_df['time']
+    censoring = example_df['Died']
+    group = example_df['group']
+    # Compute survival Kaplan-Meier estimates
+    results = km.fit(time_event, censoring, group)
+    # Save the plot as an image, don't display
+    km.plot(results, savepath=path, visible=False, dpi=300)
+    # return results
 
 # TODO: Function to download the GSVA data to CSV file, and KM plot to PNG
 def download_output():
@@ -121,8 +130,16 @@ def download_output():
     gsva_df_csv = gsva_df.to_csv(f'gsva_{today}.csv', index=False)
 
     # TESTING -- KM plot export
-    plt.plot([1, 2, 3], [1, 4, 9])
-    plt.savefig(f'km_plot_{today}.png')
+    # plt.plot([1, 2, 3], [1, 4, 9])
+    
+    # TESTING OS path -- Get the Downloads folder path
+    downloads_folder = str(Path.home() / "Downloads")
+    # Create the full path for the KM plot
+    file_path = os.path.join(downloads_folder, 'km_plot.png')
+    # Create KM plot and save to the file path
+    create_km_plot(file_path)
+    
+    # create_km_plot('~/km_plot.png')
 
 # Function to block the form from submitting on Enter press with text_input (built-in streamlit functionality)
 def block_form_submit():
@@ -220,14 +237,6 @@ def customize_buttons() -> None:
     
 # ------------------------------------ APP ------------------------------------
 def main():  
-    # Define JavaScript code for auto-scroll to the results section
-    scroll_js = '''
-        <script>
-            console.log(window.parent.document.querySelector(".main"));
-            window.parent.document.querySelector(".main").scrollTo({top: 500, behavior: 'smooth'});
-        </script>
-        '''
-
     # App title
     st.title("SURVIVAL ANALYSIS")
     st.divider()
@@ -306,12 +315,12 @@ def main():
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
         # Calculate GSVA
-        gsva = calculate_gsva(df)
-        # Display the kaplan meier plot
-        km_plot = create_km_plot()
+        # gsva = calculate_gsva(df)
+        # Call function to create the kaplan meier results
+        results = create_km_plot('km_plot.png')
         
         # Define an empty element for scrolling to results
-        scroll_temp = st.empty()
+        scroll_placeholder = st.empty()
         
         # Display the results
         with st.container(border=True):
@@ -328,24 +337,28 @@ def main():
             st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
             st.divider()
 
-            # Create placeholders to hold the gsva and km plot content
-            gsva_placeholder = st.empty()
+            # Create placeholders to hold the gsva, km plot and download button content
+            # gsva_placeholder = st.empty()
             km_plot_placeholder = st.empty()
             download_results_placeholder = st.empty()
-            with gsva_placeholder:
-                # TODO: Display GSVA output
-                st.write(gsva.res2d.head())
+            # with gsva_placeholder:
+                # Display GSVA output
+                # st.write(gsva.res2d.head())
             with km_plot_placeholder:
-                # TODO: Display KM plot
-                fig = create_km_plot()
-                st.pyplot(fig)
+                # Display the KM plot image created
+                st.image("km_plot.png")
             with download_results_placeholder:
                 st.button(":arrow_down: Download Results", on_click=download_output)
             # Add in auto-scroll behaviour
-            with scroll_temp:
-                st.components.v1.html(scroll_js, height=0)
+            with scroll_placeholder:
+                # Define JavaScript code for auto-scroll to the results section
+                st.components.v1.html("""
+                    <script>
+                        console.log(window.parent.document.querySelector(".main"));
+                        window.parent.document.querySelector(".main").scrollTo({top: 500, behavior: 'smooth'});
+                    </script>""", height=0)
                 time.sleep(.5) # Ensure the script can execute before being deleted
-            scroll_temp.empty()
+            scroll_placeholder.empty() # Reset the scroll_placeholder element
 
     
 # ------------------------------------ RUN THE APP ------------------------------------
