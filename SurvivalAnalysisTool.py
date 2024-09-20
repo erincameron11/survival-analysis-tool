@@ -15,10 +15,31 @@ from pathlib import Path # for KM plot downloading
 
 
 # ------------------------------------ DATA ------------------------------------
-# Cache the dataframe using st.cache_data decorator
 @st.cache_data
-# Function to read in the RNA & ID/Gene mapping tsv files
 def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_filename):
+    """
+    Loads all RNA, Gene Mapping, Survival, and Phenotype data files. Uses st.cache_data decorator to cache the dataframes.
+
+    Parameters
+    ----------
+    rna_filename : str
+        RNA filename string.
+    gene_mapping_filename : str
+        Gene mapping filename string.
+    survival_filename : str
+        Survival filename string.
+    phenotype_filename : str
+        Phenotype filename string.
+
+    Returns
+    -------
+    merged_trimmed_filtered_df : pandas DataFrame
+        RNA dataframe with mapped gene names, and filtered for common samples
+    survival_filtered_ordered_df : pandas DataFrame
+        Survival dataframe filtered for common samples, and reordered to RNA ordering
+    phenotype_filtered_ordered_df : pandas DataFrame
+        Phenotype dataframe filtered for common samples, and reordered to RNA ordering
+    """
     # Load in the RNA matrix 
     df = pd.read_parquet(rna_filename)
     
@@ -60,30 +81,63 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
 
 # ------------------------------------ HELPER FUNCTIONS ------------------------------------
 def handle_submit():
+    """
+    Sets the session_state of the form to True once the form is validated.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     # If the entire form is filled out, submit
     if validate_form():
         # Mark the form as submitted
         st.session_state.form_submitted = True
 
 
-# Function to check if all data fields were filled out
 def validate_form():
+    """
+    Validates that all form fields are filled out with data.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    bool
+        True if the form is valid, False if the form is invalid.
+    """
     # Use state sessions to get form values
+    signature_name = st.session_state.get('signature_name', '')
     genes_entered = st.session_state.get('genes_entered', '')
     cancer_types_entered = st.session_state.get('cancer_types_entered', '')
     cut_point_entered = st.session_state.get('cut_point_entered', '')
     
     # If all form fields filled out, return True, else False
-    if genes_entered and cancer_types_entered and cut_point_entered:
-        valid_form = True
+    if signature_name and genes_entered and cancer_types_entered and cut_point_entered:
         return True
     else:
-        valid_form = False
         return False
 
 
-# TODO: Function to calculate GSVA scores
 def calculate_gsva(df):
+    """
+    Calculates GSVA scores using GSEAPY ssGSEA.
+
+    Parameters
+    ----------
+    df : pandas DataFrame
+        RNA dataframe.
+
+    Returns
+    -------
+    scores : gseapy.ssgsea.SingleSampleGSEA
+        ssGSEA dataframe output with score values.
+    """
     # Use state sessions to get form values
     signature_name = st.session_state.get('signature_name', '')
     genes_entered = st.session_state.get('genes_entered', '')
@@ -103,8 +157,19 @@ def calculate_gsva(df):
     return scores
 
 
-# TODO: Function to create the Kaplan Meier plot
 def create_km_plot(path):
+    """
+    Creates a Kaplan Meier plot output and saves to file.
+
+    Parameters
+    ----------
+    path : str
+        RNA filename string.
+
+    Returns
+    -------
+    None
+    """
     # Create and show KM plot
     # TESTING -- Example dataframe from kaplanmeier package
     example_df = km.example_data()
@@ -118,8 +183,18 @@ def create_km_plot(path):
     km.plot(results, savepath=path, visible=False, dpi=200)
 
 
-# TODO: Function to download the GSVA data to CSV file, and KM plot to PNG
 def download_output():
+    """
+    Downloads GSVA data to CSV file and KM plot to PNG on the users' local machine.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     # Get the current date and time for file naming
     today = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     # Get the Downloads folder path
@@ -140,8 +215,18 @@ def download_output():
     create_km_plot(km_file_path)
 
 
-# Function to block the form from submitting on Enter press with text_input (built-in streamlit functionality)
 def block_form_submit():
+    """
+    Blocks the Streamlit form from submitting on Enter press with text_input components, using JavaScript injection.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     components.html("""
     <script>
         const inputs = window.parent.document.querySelectorAll('input');
@@ -156,8 +241,18 @@ def block_form_submit():
     """, height=0)
 
 
-# Function to auto-scroll down the page 500 pixels each time it is called
 def auto_scroll():
+    """
+    Auto-scrolls user screen down 500 pixels on each method call.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     # Define JavaScript code for auto-scroll to the results section
     st.components.v1.html("""
         <script>
@@ -166,9 +261,21 @@ def auto_scroll():
         </script>""", height=0)
 
 
+
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
 # Function to alter CSS styling for multiselect, text input, and buttons
 def custom_css():
+    """
+    Applies all custom CSS to the Streamlit application.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     st.markdown("""
        <style>
         /* Multiselect initial border colour */
@@ -229,7 +336,18 @@ def custom_css():
 
 
 # ------------------------------------ APP ------------------------------------
-def main():  
+def main():
+    """
+    Main method to run the application.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     # App title
     st.title("SURVIVAL ANALYSIS")
     st.divider()
@@ -288,7 +406,7 @@ def main():
         # If the submit button was clicked, check that all fields are filled in
         if submit_button:
             # If not all fields are filled in
-            if not signature_name or not genes_entered or not cancer_types_entered or not cut_point_entered:
+            if not validate_form():
                 # Display red text form validation
                 with form_validation_placeholder:
                     st.markdown("""
@@ -310,11 +428,12 @@ def main():
     if st.session_state.get('form_submitted', False):
         # Calculate GSVA
         gsva_info = st.info('Calculating GSVA scores...', icon="🔄")
+        # gsva = calculate_gsva()
         time.sleep(3)
         gsva_info.empty()
         
         # Create the kaplan meier results
-        results = create_km_plot('km_plot.png')
+        create_km_plot('km_plot.png')
 
         # Scroll down once calculations complete
         auto_scroll()
