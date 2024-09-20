@@ -124,7 +124,7 @@ def validate_form():
         return False
 
 
-def calculate_gsva(df):
+def calculate_gsva(df, phenotype_df):
     """
     Calculates GSVA scores using GSEAPY ssGSEA.
 
@@ -149,10 +149,15 @@ def calculate_gsva(df):
     
     # Determine the number of threads to run the calculations on
     n_threads=threading.active_count()-1
+
+    # Get a list of samples for cancer types
+    cancer_type_samples = list(phenotype_df.query('project_id in @cancer_types_entered')['sample'])
+    # Subset the original RNA count matrix to only have samples in selected cancer types
+    subset_counts = df.loc[: , cancer_type_samples]
     
     # Calculate the GSVA scores
-    scores = gp.ssgsea(data=df, gene_sets=signature, outdir=None, 
-               sample_norm_method='rank', threads=n_threads, min_size=2, 
+    scores = gp.ssgsea(data=subset_counts, gene_sets=signature, outdir=None, 
+               sample_norm_method='rank', threads=n_threads, min_size=0,
                verbose=True)
     return scores
 
@@ -415,8 +420,6 @@ def main():
             else:
                 # Auto scroll to GSVA calculation info message
                 auto_scroll()
-    
-    # TODO: IF GSVA TAKES TOO LONG TO PROCESS, CONSIDER USING st.status WHILE LOADING RESULTS
 
     # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
     block_form_submit()
@@ -428,8 +431,7 @@ def main():
     if st.session_state.get('form_submitted', False):
         # Calculate GSVA
         gsva_info = st.info('Calculating GSVA scores...', icon="🔄")
-        # gsva = calculate_gsva()
-        time.sleep(3)
+        gsva = calculate_gsva(df, phenotype_df)
         gsva_info.empty()
         
         # Create the kaplan meier results
