@@ -61,10 +61,6 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
 def handle_submit():
     # If the entire form is filled out, calculate GSVA, display the kaplan meier plot and submit
     if validate_form():
-        # # Calculate GSVA
-        # calculate_gsva()
-        # # Display the kaplan meier plot
-        # create_km_plot()
         # Mark the form as submitted
         st.session_state.form_submitted = True
 
@@ -116,30 +112,28 @@ def create_km_plot(path):
     results = km.fit(time_event, censoring, group)
     # Save the plot as an image, don't display
     km.plot(results, savepath=path, visible=False, dpi=300)
-    # return results
 
 # TODO: Function to download the GSVA data to CSV file, and KM plot to PNG
 def download_output():
     # Get the current date and time for file naming
     today = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    # Get the Downloads folder path
+    downloads_folder = str(Path.home() / "Downloads")
     
     # GSVA export
     # Transform GSVA data into CSV format
-    gsva = {'col1': [1, 2], 'col2': [3, 4]}
-    gsva_df = pd.DataFrame(data=gsva)
-    gsva_df_csv = gsva_df.to_csv(f'gsva_{today}.csv', index=False)
+    # TESTING -- gsva calculations for testing purposes
+    gsva_testing = pd.read_parquet('./data/gsva_scores.parquet')
+    # Create the full path for the GSVA scores
+    gsva_file_path = os.path.join(downloads_folder, f'gsva_scores_{today}.csv')
+    # Output to CSV to the specified filepath
+    gsva_testing.to_csv(gsva_file_path, index=False)
 
-    # TESTING -- KM plot export
-    # plt.plot([1, 2, 3], [1, 4, 9])
-    
-    # TESTING OS path -- Get the Downloads folder path
-    downloads_folder = str(Path.home() / "Downloads")
+    # KM plot export
     # Create the full path for the KM plot
-    file_path = os.path.join(downloads_folder, 'km_plot.png')
+    km_file_path = os.path.join(downloads_folder, f'km_plot_{today}.png')
     # Create KM plot and save to the file path
-    create_km_plot(file_path)
-    
-    # create_km_plot('~/km_plot.png')
+    create_km_plot(km_file_path)
 
 # Function to block the form from submitting on Enter press with text_input (built-in streamlit functionality)
 def block_form_submit():
@@ -248,8 +242,8 @@ def main():
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
                                               './data/gencode.v22.annotation.gene.probeMap',
                                               './data/GDC-PANCAN.survival.parquet', 
-                                              './data/GDC-PANCAN.basic_phenotype.parquet')
-
+                                              './data/GDC-PANCAN.basic_phenotype.parquet',
+                                             )
     # Locate all gene names in a list
     gene_names = df.index.unique()
     
