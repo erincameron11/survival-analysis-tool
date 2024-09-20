@@ -1,18 +1,18 @@
 # Import statements
 import streamlit as st # for UI
-# from streamlit_tags import st_tags
 import pandas as pd # for data set analysis and manipulation
 import kaplanmeier as km
 import matplotlib.pyplot as plt # TESTING for image export of KM plots
-# from GSVA import gsva
 from datetime import datetime # for file naming convention for exports
 import numpy as np # TESTING for st.pyplot
-import streamlit.components.v1 as components # TESTING for km plot page anchor
+import streamlit.components.v1 as components # for KM plot page anchor
 import time # for page anchor scrolling
 import gseapy as gp # for GSVA calculation
 import threading # for accelerating the GSVA calculation
-import os # TESTING -- for km plot downloading
-from pathlib import Path # TESTING -- for km plot downloading
+import os # for KM plot downloading
+from pathlib import Path # for KM plot downloading
+
+
 
 # ------------------------------------ DATA ------------------------------------
 # Cache the dataframe using st.cache_data decorator
@@ -57,12 +57,14 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
     return merged_trimmed_filtered_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
 
 
+
 # ------------------------------------ HELPER FUNCTIONS ------------------------------------
 def handle_submit():
-    # If the entire form is filled out, calculate GSVA, display the kaplan meier plot and submit
+    # If the entire form is filled out, submit
     if validate_form():
         # Mark the form as submitted
         st.session_state.form_submitted = True
+
 
 # Function to check if all data fields were filled out
 def validate_form():
@@ -78,6 +80,7 @@ def validate_form():
     else:
         valid_form = False
         return False
+
 
 # TODO: Function to calculate GSVA scores
 def calculate_gsva(df):
@@ -99,6 +102,7 @@ def calculate_gsva(df):
                verbose=True)
     return scores
 
+
 # TODO: Function to create the Kaplan Meier plot
 def create_km_plot(path):
     # Create and show KM plot
@@ -111,17 +115,17 @@ def create_km_plot(path):
     # Compute survival Kaplan-Meier estimates
     results = km.fit(time_event, censoring, group)
     # Save the plot as an image, don't display
-    km.plot(results, savepath=path, visible=False, dpi=300)
+    km.plot(results, savepath=path, visible=False, dpi=200)
+
 
 # TODO: Function to download the GSVA data to CSV file, and KM plot to PNG
 def download_output():
     # Get the current date and time for file naming
-    today = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    today = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     # Get the Downloads folder path
     downloads_folder = str(Path.home() / "Downloads")
     
-    # GSVA export
-    # Transform GSVA data into CSV format
+    # GSVA export into CSV format
     # TESTING -- gsva calculations for testing purposes
     gsva_testing = pd.read_parquet('./data/gsva_scores.parquet')
     # Create the full path for the GSVA scores
@@ -134,6 +138,7 @@ def download_output():
     km_file_path = os.path.join(downloads_folder, f'km_plot_{today}.png')
     # Create KM plot and save to the file path
     create_km_plot(km_file_path)
+
 
 # Function to block the form from submitting on Enter press with text_input (built-in streamlit functionality)
 def block_form_submit():
@@ -149,6 +154,16 @@ def block_form_submit():
         });
         </script>
     """, height=0)
+
+
+# Function to auto-scroll down the page 500 pixels each time it is called
+def auto_scroll():
+    # Define JavaScript code for auto-scroll to the results section
+    st.components.v1.html("""
+        <script>
+            console.log(window.parent.document.querySelector(".main"));
+            window.parent.document.querySelector(".main").scrollTo({top: 500, behavior: 'smooth'});
+        </script>""", height=0)
 
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
@@ -177,6 +192,7 @@ def customize_multiselect_colours() -> None:
         </style>
     """, unsafe_allow_html=True)
 
+
 # Function to inject CSS and change the gene signature text input colours
 def customize_text_input() -> None:
     # Text Input colour CSS styling    
@@ -203,6 +219,7 @@ def customize_text_input() -> None:
         </style>
     """, unsafe_allow_html=True)
 
+
 # Function to customize the style of buttons
 def customize_buttons() -> None:
     st.markdown("""
@@ -228,7 +245,8 @@ def customize_buttons() -> None:
         </style>
     """, unsafe_allow_html=True)
 
-    
+
+
 # ------------------------------------ APP ------------------------------------
 def main():  
     # App title
@@ -295,6 +313,9 @@ def main():
                     st.markdown("""
                         <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
                     """, unsafe_allow_html=True)
+            else:
+                # Auto scroll to GSVA calculation info message
+                auto_scroll()
     
     # TODO: IF GSVA TAKES TOO LONG TO PROCESS, CONSIDER USING st.status WHILE LOADING RESULTS
 
@@ -309,29 +330,34 @@ def main():
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
         # Calculate GSVA
-        # gsva = calculate_gsva(df)
-        # Call function to create the kaplan meier results
+        gsva_info = st.info('Calculating GSVA scores...', icon="🔄")
+        time.sleep(3)
+        gsva_info.empty()
+        
+        # Create the kaplan meier results
         results = create_km_plot('km_plot.png')
-        
-        # Define an empty element for scrolling to results
-        scroll_placeholder = st.empty()
-        
-        # Display the results
-        with st.container(border=True):
-            st.subheader("Results")
 
+        # Scroll down once calculations complete
+        auto_scroll()
+        
+        # Display the results inside a container
+        with st.container(border=True):
+            # Display results subheader
+            st.subheader("Results")
+            
             # Use state sessions to get form values
             signature_name = st.session_state.get('signature_name', '')
             genes_entered = st.session_state.get('genes_entered', '')
             cancer_types_entered = st.session_state.get('cancer_types_entered', '')
             cut_point_entered = st.session_state.get('cut_point_entered', '')
-            # Display the entered form values
+            
+            # Display the entered form values for user
             genes_entered_str = ", ".join(genes_entered)
             cancer_types_entered_str = ", ".join(cancer_types_entered)
             st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
             st.divider()
 
-            # Create placeholders to hold the gsva, km plot and download button content
+            # Create placeholders to hold the GSVA, KM plot and download button content
             # gsva_placeholder = st.empty()
             km_plot_placeholder = st.empty()
             download_results_placeholder = st.empty()
@@ -343,18 +369,8 @@ def main():
                 st.image("km_plot.png")
             with download_results_placeholder:
                 st.button(":arrow_down: Download Results", on_click=download_output)
-            # Add in auto-scroll behaviour
-            with scroll_placeholder:
-                # Define JavaScript code for auto-scroll to the results section
-                st.components.v1.html("""
-                    <script>
-                        console.log(window.parent.document.querySelector(".main"));
-                        window.parent.document.querySelector(".main").scrollTo({top: 500, behavior: 'smooth'});
-                    </script>""", height=0)
-                time.sleep(.5) # Ensure the script can execute before being deleted
-            scroll_placeholder.empty() # Reset the scroll_placeholder element
-
     
+
 # ------------------------------------ RUN THE APP ------------------------------------
 if __name__ == "__main__":
     main()
