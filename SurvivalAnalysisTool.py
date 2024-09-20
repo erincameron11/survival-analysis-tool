@@ -167,9 +167,8 @@ def auto_scroll():
 
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
-# Function to inject CSS and change the gene multiselect tag colours to green once entered
-def customize_multiselect_colours() -> None:
-    # Multiselect input outline CSS styling
+# Function to alter CSS styling for multiselect, text input, and buttons
+def custom_css():
     st.markdown("""
        <style>
         /* Multiselect initial border colour */
@@ -189,16 +188,7 @@ def customize_multiselect_colours() -> None:
             background-color: #4A9661 !important;
             color: white !important;
         }
-        </style>
-    """, unsafe_allow_html=True)
-
-
-# Function to inject CSS and change the gene signature text input colours
-def customize_text_input() -> None:
-    # Text Input colour CSS styling    
-    st.markdown("""
-        <style>
-        /* Change the outline styling for text_inputs */
+        /* Text Input outline styling */
         .stTextInput > div[class]:focus-within {
             border-bottom-color: #c4c1c1 !important;
             border-top-color: #c4c1c1 !important;
@@ -208,23 +198,15 @@ def customize_text_input() -> None:
         [data-testid="InputInstructions"] { 
             display: None;
         }
-        /* Change the placeholder text opacity */
+        /* Text Input placeholder text opacity */
         .stTextInput > div > div > input::placeholder {
             opacity: 1.0;
         }
-        /* Change the input field border radius */
+        /* Text Input border radius */
         .stTextInput > div {
             border-radius: 4px;
         }
-        </style>
-    """, unsafe_allow_html=True)
-
-
-# Function to customize the style of buttons
-def customize_buttons() -> None:
-    st.markdown("""
-        <style>
-        /* Initial button style */
+        /* Button initial style */
         div.stButton > button, div.stFormSubmitButton > button {
             background-color: white !important;
             border-color: #D5D6D8 !important;
@@ -244,7 +226,6 @@ def customize_buttons() -> None:
         }
         </style>
     """, unsafe_allow_html=True)
-
 
 
 # ------------------------------------ APP ------------------------------------
@@ -323,9 +304,7 @@ def main():
     block_form_submit()
 
     # Apply CSS for custom styling
-    customize_multiselect_colours()
-    customize_buttons()
-    customize_text_input()
+    custom_css()
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
