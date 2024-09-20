@@ -112,10 +112,7 @@ def validate_form():
         True if the form is valid, False if the form is invalid.
     """
     # Use state sessions to get form values
-    signature_name = st.session_state.get('signature_name', '')
-    genes_entered = st.session_state.get('genes_entered', '')
-    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
-    cut_point_entered = st.session_state.get('cut_point_entered', '')
+    signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
     
     # If all form fields filled out, return True, else False
     if signature_name and genes_entered and cancer_types_entered and cut_point_entered:
@@ -139,10 +136,7 @@ def calculate_gsva(df, phenotype_df):
         ssGSEA dataframe output with score values.
     """
     # Use state sessions to get form values
-    signature_name = st.session_state.get('signature_name', '')
-    genes_entered = st.session_state.get('genes_entered', '')
-    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
-    cut_point_entered = st.session_state.get('cut_point_entered', '')
+    signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
 
     # Create a dictionary of signature and gene names
     signature = {signature_name: genes_entered}
@@ -265,6 +259,32 @@ def auto_scroll():
             window.parent.document.querySelector(".main").scrollTo({top: 500, behavior: 'smooth'});
         </script>""", height=0)
 
+
+def get_form_values():
+    """
+    Obtains form values entered by user using Streamlit session_state.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    signature_name : str
+        Custom name of the signature entered by user.
+    genes_entered : list
+        1 or more genes selected by the user.
+    cancer_types_entered : list
+        1 or more cancer types selected by user.
+    cut_point_entered : str
+        Cut-point selected by user.
+    """
+    # Use state sessions to get form values
+    signature_name = st.session_state.get('signature_name', '')
+    genes_entered = st.session_state.get('genes_entered', '')
+    cancer_types_entered = st.session_state.get('cancer_types_entered', '')
+    cut_point_entered = st.session_state.get('cut_point_entered', '')
+    return signature_name, genes_entered, cancer_types_entered, cut_point_entered
 
 
 # ------------------------------------ STYLING FUNCTIONS ------------------------------------
@@ -399,7 +419,7 @@ def main():
         # Dropdown for cut-point
         cut_point_entered = st.selectbox(
             "Cut-Point:",
-            ("Median", "Tertile - ALL", "Tertile - Top and Bottom only", "Quartile - ALL", "Quartile - Top and Bottom only"),
+            ("Median", "Tertile", "Tertile - Top and Bottom only", "Quartile", "Quartile - Top and Bottom only"),
             index=None,
             placeholder="Select cut-point",
             key='cut_point_entered',
@@ -446,15 +466,13 @@ def main():
             st.subheader("Results")
             
             # Use state sessions to get form values
-            signature_name = st.session_state.get('signature_name', '')
-            genes_entered = st.session_state.get('genes_entered', '')
-            cancer_types_entered = st.session_state.get('cancer_types_entered', '')
-            cut_point_entered = st.session_state.get('cut_point_entered', '')
+            signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
             
             # Display the entered form values for user
             genes_entered_str = ", ".join(genes_entered)
             cancer_types_entered_str = ", ".join(cancer_types_entered)
-            st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
+            st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, 
+                     "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
             st.divider()
 
             # Create placeholders to hold the GSVA, KM plot and download button content
