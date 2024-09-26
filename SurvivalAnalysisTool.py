@@ -419,7 +419,7 @@ def main():
         # Dropdown for cut-point
         cut_point_entered = st.selectbox(
             "Cut-Point:",
-            ("Median", "Tertile", "Tertile - Top and Bottom only", "Quartile", "Quartile - Top and Bottom only"),
+            ("Median", "Tertile", "Tertile - Top & Bottom only", "Quartile", "Quartile - Top & Bottom only"),
             index=None,
             placeholder="Select cut-point",
             key='cut_point_entered',

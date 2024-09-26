@@ -1,4 +1,7 @@
-# Survival Analysis Tool
+# SIGvival
+A survival analysis tool.
+
+---
 
 ## Datasets
 Datasets were obtained from `UCSC Xena` GDC Pan-Cancer (PANCAN) cohort:
