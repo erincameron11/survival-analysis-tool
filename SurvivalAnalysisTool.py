@@ -213,6 +213,7 @@ def create_km_plot(ssgsea_scores, survival_df):
     
     # Locate P value
     p_value = results['logrank_P']
+    st.dataframe(results)
     
     # Compute hazard ratio
     hazard_df = km_df.copy()
@@ -225,14 +226,16 @@ def create_km_plot(ssgsea_scores, survival_df):
     hazard_ratio = np.exp(log_hazard_ratio)
     
     # Plot with P value, hazard ratio, and signature name
-    title = f'Kaplan-Meier survival estimates\n{signature_name}\nP={p_value}\nHR={hazard_ratio}'
+    title = f'{signature_name}\nP={round(p_value, 4)}, HR={round(hazard_ratio, 4)}'
     km_plot = km.plot(results, title=title, dpi=300, visible=True)
-    # Extract the figure from the plot output
+    # Extract the figure and legend from the plot output
     km_plot_figure = km_plot[0]
-    # Adjust the margins
+    ax = km_plot[1]
+    ax.legend(title='NES')
+    # Adjust the margins and legend
     km_plot_figure.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
-    # # Save the plot - using bbox_inches='tight' to avoid cutting off any content
-    # fig.savefig("mat_km_plot.png", bbox_inches='tight')
+    # legend.set_title('NES')
+    # Save the plot - using bbox_inches='tight' to avoid cutting off any content
     return km_plot_figure
 
 
@@ -535,8 +538,7 @@ def main():
                 # st.dataframe(ssgsea_scores.head())
             with km_plot_placeholder:
                 # Display the KM plot image created
-                # km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
-                km_plot_figure.show()
+                st.pyplot(fig=km_plot_figure, use_container_width=True)
             with download_results_placeholder:
                 st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
     
