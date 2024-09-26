@@ -374,11 +374,11 @@ def main():
     None
     """
     # App title
-    st.title("SURVIVAL ANALYSIS")
+    st.title("SIGvival")
     st.divider()
     
     # Create a field for informational text
-    # st.write("Describe KM plots, GSVA and what to do on this webpage...")
+    st.write("Calculate GSVA and create a custom Kaplan Meier plot below:")
 
     # Call the load data method
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
