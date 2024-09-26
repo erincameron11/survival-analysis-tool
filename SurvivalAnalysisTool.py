@@ -11,6 +11,7 @@ import gseapy as gp # for GSVA calculation
 import threading # for accelerating the GSVA calculation
 import os # for KM plot downloading
 from pathlib import Path # for KM plot downloading
+import statsmodels.api as sm # for hazard ratio calculations 
 
 
 
@@ -153,10 +154,10 @@ def calculate_gsva(df, phenotype_df):
     scores = gp.ssgsea(data=subset_counts, gene_sets=signature, outdir=None, 
                sample_norm_method='rank', threads=n_threads, min_size=0,
                verbose=True)
-    return scores
+    return scores.res2d
 
 
-def create_km_plot(path):
+def create_km_plot(gsva_scores, survival_df):
     """
     Creates a Kaplan Meier plot output and saves to file.
 
@@ -169,20 +170,73 @@ def create_km_plot(path):
     -------
     None
     """
-    # Create and show KM plot
-    # TESTING -- Example dataframe from kaplanmeier package
-    example_df = km.example_data()
-    # Kaplan-Meier fit
-    time_event = example_df['time']
-    censoring = example_df['Died']
-    group = example_df['group']
-    # Compute survival Kaplan-Meier estimates
-    results = km.fit(time_event, censoring, group)
-    # Save the plot as an image, don't display
-    km.plot(results, savepath=path, visible=False, dpi=200)
+    # Use state sessions to get form values
+    signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
+    cut_point_entered = cut_point_entered.lower()
+    
+    # Define the number of quantile cuts to make
+    if 'median' in cut_point_entered:
+        n = 2
+        labels = ['Low: below median', 'High: above median']
+    if 'tertile' in cut_point_entered:
+        n = 3
+        labels = ['Low: bottom tertile', 'Medium: middle tertile', 'High: top tertile']
+    if 'quartile' in cut_point_entered:
+        n = 4
+        labels = ['Low: bottom quartile', 'Medium1: second quartile', 'Medium2: third quartile', 'High: top quartile']
+    
+    # Make the quantile cuts & label samples by the scoring grouping
+    nes_scores = gsva_scores['NES']
+    km_groups = pd.qcut(nes_scores, n, labels=labels)
+    
+    # Bind KM groups to survival dataframe by aligning the indices of both the Series and the DataFrame
+    # Create a new dataframe by copying the original survival_df
+    km_df = survival_df.copy()
+    # Add the 'NES_group' column from km_groups to the new dataframe
+    km_df['NES_group'] = km_groups
+    
+    # Drop any 'NES_group' null values
+    km_df = km_df.dropna(subset=['NES_group'])
+    
+    # BUT the user might not want all groups (quantiles) on the plot (eg; top & bottom only)
+    if 'top' in cut_point_entered:
+        # Subset km_df to include only rows where 'NES_group' contains 'top' or 'bottom'
+        km_df = km_df[km_df['NES_group'].str.contains('Top|Bottom', case=False)]
+
+    # Plot the KM plot
+    time_event = km_df['OS.time']
+    censoring = km_df['OS'] # Alive / Dead
+    y = km_df['NES_group']
+    
+    # Compute Survival
+    results = km.fit(time_event, censoring, y)
+    
+    # Locate P value
+    p_value = results['logrank_P']
+    
+    # Compute hazard ratio
+    hazard_df = km_df.copy()
+    hazard_df['NES_group'] = hazard_df['NES_group'].cat.codes
+    cox_model = sm.PHReg(hazard_df['OS.time'], hazard_df[['NES_group']], status=hazard_df['OS'])
+    hazard_results = cox_model.fit()
+    # Locate the log hazard ratio (log HR)
+    log_hazard_ratio = hazard_results.params[0]
+    # Calculate the Hazard Ratio (HR)
+    hazard_ratio = np.exp(log_hazard_ratio)
+    
+    # Plot with P value, hazard ratio, and signature name
+    title = f'Kaplan-Meier survival estimates\n{signature_name}\nP={p_value}\nHR={hazard_ratio}'
+    km_plot = km.plot(results, title=title, dpi=300, visible=True)
+    # Extract the figure from the plot output
+    km_plot_figure = km_plot[0]
+    # Adjust the margins
+    km_plot_figure.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
+    # # Save the plot - using bbox_inches='tight' to avoid cutting off any content
+    # fig.savefig("mat_km_plot.png", bbox_inches='tight')
+    return km_plot_figure
 
 
-def download_output():
+def download_output(gsva_scores, km_plot_figure):
     """
     Downloads GSVA data to CSV file and KM plot to PNG on the users' local machine.
 
@@ -200,18 +254,16 @@ def download_output():
     downloads_folder = str(Path.home() / "Downloads")
     
     # GSVA export into CSV format
-    # TESTING -- gsva calculations for testing purposes
-    gsva_testing = pd.read_parquet('./data/gsva_scores.parquet')
     # Create the full path for the GSVA scores
     gsva_file_path = os.path.join(downloads_folder, f'gsva_scores_{today}.csv')
     # Output to CSV to the specified filepath
-    gsva_testing.to_csv(gsva_file_path, index=False)
+    gsva_scores.to_csv(gsva_file_path, index=False)
 
     # KM plot export
     # Create the full path for the KM plot
     km_file_path = os.path.join(downloads_folder, f'km_plot_{today}.png')
-    # Create KM plot and save to the file path
-    create_km_plot(km_file_path)
+    # Save KM plot to the file path
+    km_plot_figure.savefig(km_file_path, bbox_inches='tight')
 
 
 def block_form_submit():
@@ -451,11 +503,11 @@ def main():
     if st.session_state.get('form_submitted', False):
         # Calculate GSVA
         gsva_info = st.info('Calculating GSVA scores...', icon="🔄")
-        gsva = calculate_gsva(df, phenotype_df)
+        gsva_scores = calculate_gsva(df, phenotype_df)
         gsva_info.empty()
         
         # Create the kaplan meier results
-        create_km_plot('km_plot.png')
+        km_plot_figure = create_km_plot(gsva_scores, survival_df)
 
         # Scroll down once calculations complete
         auto_scroll()
@@ -484,9 +536,10 @@ def main():
                 # st.write(gsva.res2d.head())
             with km_plot_placeholder:
                 # Display the KM plot image created
-                st.image("km_plot.png")
+                # km_plot_figure = create_km_plot(gsva_scores, survival_df)
+                km_plot_figure.visible=True
             with download_results_placeholder:
-                st.button(":arrow_down: Download Results", on_click=download_output)
+                st.button(":arrow_down: Download Results", on_click=download_output, args=(gsva_scores, km_plot_figure,))
     
 
 # ------------------------------------ RUN THE APP ------------------------------------
