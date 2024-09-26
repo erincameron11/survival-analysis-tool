@@ -1,6 +1,13 @@
+# Jupyter Lab
 .ipynb_checkpoints
+
+# Filetypes
 *.tsv
 *.probeMap
+
+# Folders
 .streamlit/
-.DS_Store
 data/
+
+# MacOS
+.DS_Store
