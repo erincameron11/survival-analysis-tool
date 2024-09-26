@@ -7,8 +7,8 @@ from datetime import datetime # for file naming convention for exports
 import numpy as np # TESTING for st.pyplot
 import streamlit.components.v1 as components # for KM plot page anchor
 import time # for page anchor scrolling
-import gseapy as gp # for GSVA calculation
-import threading # for accelerating the GSVA calculation
+import gseapy as gp # for ssGSEA calculation
+import threading # for accelerating the ssGSEA calculation
 import os # for KM plot downloading
 from pathlib import Path # for KM plot downloading
 import statsmodels.api as sm # for hazard ratio calculations 
@@ -122,9 +122,9 @@ def validate_form():
         return False
 
 
-def calculate_gsva(df, phenotype_df):
+def calculate_ssgsea(df, phenotype_df):
     """
-    Calculates GSVA scores using GSEAPY ssGSEA.
+    Calculates ssGSEA scores using GSEAPY ssGSEA.
 
     Parameters
     ----------
@@ -150,14 +150,14 @@ def calculate_gsva(df, phenotype_df):
     # Subset the original RNA count matrix to only have samples in selected cancer types
     subset_counts = df.loc[: , cancer_type_samples]
     
-    # Calculate the GSVA scores
+    # Calculate the ssGSEA scores
     scores = gp.ssgsea(data=subset_counts, gene_sets=signature, outdir=None, 
                sample_norm_method='rank', threads=n_threads, min_size=0,
                verbose=True)
     return scores.res2d
 
 
-def create_km_plot(gsva_scores, survival_df):
+def create_km_plot(ssgsea_scores, survival_df):
     """
     Creates a Kaplan Meier plot output and saves to file.
 
@@ -186,7 +186,7 @@ def create_km_plot(gsva_scores, survival_df):
         labels = ['Low: bottom quartile', 'Medium1: second quartile', 'Medium2: third quartile', 'High: top quartile']
     
     # Make the quantile cuts & label samples by the scoring grouping
-    nes_scores = gsva_scores['NES']
+    nes_scores = ssgsea_scores['NES']
     km_groups = pd.qcut(nes_scores, n, labels=labels)
     
     # Bind KM groups to survival dataframe by aligning the indices of both the Series and the DataFrame
@@ -236,9 +236,9 @@ def create_km_plot(gsva_scores, survival_df):
     return km_plot_figure
 
 
-def download_output(gsva_scores, km_plot_figure):
+def download_output(ssgsea_scores, km_plot_figure):
     """
-    Downloads GSVA data to CSV file and KM plot to PNG on the users' local machine.
+    Downloads ssGSEA data to CSV file and KM plot to PNG on the users' local machine.
 
     Parameters
     ----------
@@ -253,11 +253,11 @@ def download_output(gsva_scores, km_plot_figure):
     # Get the Downloads folder path
     downloads_folder = str(Path.home() / "Downloads")
     
-    # GSVA export into CSV format
-    # Create the full path for the GSVA scores
-    gsva_file_path = os.path.join(downloads_folder, f'gsva_scores_{today}.csv')
+    # ssGSEA export into CSV format
+    # Create the full path for the ssGSEA scores
+    ssgsea_file_path = os.path.join(downloads_folder, f'ssgsea_scores_{today}.csv')
     # Output to CSV to the specified filepath
-    gsva_scores.to_csv(gsva_file_path, index=False)
+    ssgsea_scores.to_csv(ssgsea_file_path, index=False)
 
     # KM plot export
     # Create the full path for the KM plot
@@ -430,7 +430,7 @@ def main():
     st.divider()
     
     # Create a field for informational text
-    st.write("Calculate GSVA and create a custom Kaplan Meier plot below:")
+    st.write("Calculate ssGSEA and create a custom Kaplan Meier plot below:")
 
     # Call the load data method
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
@@ -465,7 +465,6 @@ def main():
             (cancer_types),
             placeholder="Select cancer type",
             key='cancer_types_entered',
-            # on_change=calculate_gsva,
         )
     
         # Dropdown for cut-point
@@ -490,7 +489,7 @@ def main():
                         <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
                     """, unsafe_allow_html=True)
             else:
-                # Auto scroll to GSVA calculation info message
+                # Auto scroll to ssGSEA calculation info message
                 auto_scroll()
 
     # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
@@ -501,13 +500,13 @@ def main():
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
-        # Calculate GSVA
-        gsva_info = st.info('Calculating GSVA scores...', icon="🔄")
-        gsva_scores = calculate_gsva(df, phenotype_df)
-        gsva_info.empty()
+        # Calculate ssGSEA
+        ssgsea_info = st.info('Calculating ssGSEA scores...', icon="🔄")
+        ssgsea_scores = calculate_ssgsea(df, phenotype_df)
+        ssgsea_info.empty()
         
         # Create the kaplan meier results
-        km_plot_figure = create_km_plot(gsva_scores, survival_df)
+        km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
 
         # Scroll down once calculations complete
         auto_scroll()
@@ -527,20 +526,21 @@ def main():
                      "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
             st.divider()
 
-            # Create placeholders to hold the GSVA, KM plot and download button content
-            # gsva_placeholder = st.empty()
+            # Create placeholders to hold the ssGSEA, KM plot and download button content
+            # ssgsea_placeholder = st.empty()
             km_plot_placeholder = st.empty()
             download_results_placeholder = st.empty()
-            # with gsva_placeholder:
-                # Display GSVA output
-                # st.write(gsva.res2d.head())
+            # with ssgsea_placeholder:
+                # Display ssGSEA output
+                # st.dataframe(ssgsea_scores.head())
             with km_plot_placeholder:
                 # Display the KM plot image created
-                # km_plot_figure = create_km_plot(gsva_scores, survival_df)
-                km_plot_figure.visible=True
+                # km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
+                km_plot_figure.show()
             with download_results_placeholder:
-                st.button(":arrow_down: Download Results", on_click=download_output, args=(gsva_scores, km_plot_figure,))
+                st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
     
+
 
 # ------------------------------------ RUN THE APP ------------------------------------
 if __name__ == "__main__":
