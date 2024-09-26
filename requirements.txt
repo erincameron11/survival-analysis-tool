@@ -1,0 +1,12 @@
+streamlit
+pandas
+kaplanmeier
+matplotlib.pyplot
+datetime
+numpy
+streamlit.components.v1
+time
+gseapy
+threading
+os
+statsmodels.api

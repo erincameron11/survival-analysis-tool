@@ -1,17 +1,16 @@
 # Import statements
 import streamlit as st # for UI
 import pandas as pd # for data set analysis and manipulation
-import kaplanmeier as km
-import matplotlib.pyplot as plt # TESTING for image export of KM plots
+import matplotlib.pyplot as plt # for KM plots
 from datetime import datetime # for file naming convention for exports
-import numpy as np # TESTING for st.pyplot
+import numpy as np # for scientific calculations
 import streamlit.components.v1 as components # for KM plot page anchor
 import time # for page anchor scrolling
 import gseapy as gp # for ssGSEA calculation
 import threading # for accelerating the ssGSEA calculation
-import os # for KM plot downloading
-from pathlib import Path # for KM plot downloading
+import kaplanmeier as km # for kaplan meier plotting
 import statsmodels.api as sm # for hazard ratio calculations 
+import os # for KM plot downloading
 
 
 
