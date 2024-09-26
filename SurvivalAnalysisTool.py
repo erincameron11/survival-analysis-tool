@@ -213,7 +213,6 @@ def create_km_plot(ssgsea_scores, survival_df):
     
     # Locate P value
     p_value = results['logrank_P']
-    st.dataframe(results)
     
     # Compute hazard ratio
     hazard_df = km_df.copy()
@@ -429,11 +428,12 @@ def main():
     None
     """
     # App title
-    st.title("SIGvival")
+    st.title("TCGA SIGvival")
+    st.write(f"*Erin Cameron    |    [GitHub](https://github.com/erincameron11/survival-analysis-tool)*")
     st.divider()
     
     # Create a field for informational text
-    st.write("Calculate ssGSEA and create a custom Kaplan Meier plot below:")
+    st.write("Enter signature name, gene names, cancer types, and cut-point to generate ssGSEA scores and visualize survival outcomes with a Kaplan-Meier plot based on TCGA RNA and phenotype survival data.")
 
     # Call the load data method
     df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
