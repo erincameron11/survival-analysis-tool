@@ -16,14 +16,16 @@ import os # for KM plot downloading
 
 # ------------------------------------ DATA ------------------------------------
 @st.cache_data
-def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_filename):
+def load_data(rna_filename1, rna_filename2, gene_mapping_filename, survival_filename, phenotype_filename):
     """
     Loads all RNA, Gene Mapping, Survival, and Phenotype data files. Uses st.cache_data decorator to cache the dataframes.
 
     Parameters
     ----------
-    rna_filename : str
-        RNA filename string.
+    rna_filename1 : str
+        First half of the RNA filename string.
+    rna_filename2 : str
+        Second half of the RNA filename string.
     gene_mapping_filename : str
         Gene mapping filename string.
     survival_filename : str
@@ -40,8 +42,10 @@ def load_data(rna_filename, gene_mapping_filename, survival_filename, phenotype_
     phenotype_filtered_ordered_df : pandas DataFrame
         Phenotype dataframe filtered for common samples, and reordered to RNA ordering
     """
-    # Load in the RNA matrix 
-    df = pd.read_parquet(rna_filename)
+    # Read in both RNA matrices and concatenate the files into one
+    df_1 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet')
+    df_2 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_2.parquet')
+    df = pd.concat([df_1, df_2], axis=1)
     
     # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
     mapping = pd.read_csv(gene_mapping_filename, sep='\t')
@@ -435,7 +439,8 @@ def main():
     st.write("Enter signature name, gene names, cancer types, and cut-point to generate ssGSEA scores and visualize survival outcomes with a Kaplan-Meier plot based on TCGA RNA and phenotype survival data.")
 
     # Call the load data method
-    df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq.parquet', 
+    df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet', 
+                                              './data/GDC-PANCAN.htseq_fpkm-uq_2.parquet',
                                               './data/gencode.v22.annotation.gene.probeMap',
                                               './data/GDC-PANCAN.survival.parquet', 
                                               './data/GDC-PANCAN.basic_phenotype.parquet',
