@@ -1,12 +1,11 @@
 streamlit
 pandas
 kaplanmeier
-matplotlib.pyplot
+matplotlib
 datetime
 numpy
-streamlit.components.v1
 time
 gseapy
 threading
 os
-statsmodels.api
+statsmodels
