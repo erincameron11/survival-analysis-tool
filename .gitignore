@@ -6,7 +6,7 @@
 *.probeMap
 
 # Folders
-data/
+data/*
 
 # MacOS
 .DS_Store
