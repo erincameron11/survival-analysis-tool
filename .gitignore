@@ -6,7 +6,6 @@
 *.probeMap
 
 # Folders
-.streamlit/
 data/
 
 # MacOS
