@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt # for KM plots
 from datetime import datetime # for file naming convention for exports
 import numpy as np # for scientific calculations
 import streamlit.components.v1 as components # for KM plot page anchor
-import time # for page anchor scrolling
+# import time # for page anchor scrolling
 import gseapy as gp # for ssGSEA calculation
 import threading # for accelerating the ssGSEA calculation
 import kaplanmeier as km # for kaplan meier plotting

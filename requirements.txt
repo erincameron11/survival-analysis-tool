@@ -4,7 +4,6 @@ kaplanmeier
 matplotlib
 datetime
 numpy
-time
 gseapy
 threading
 os
