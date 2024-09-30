@@ -5,5 +5,8 @@
 *.tsv
 *.probeMap
 
+# Datasets
+/data
+
 # MacOS
 .DS_Store
