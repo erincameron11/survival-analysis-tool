@@ -6,7 +6,7 @@
 *.probeMap
 
 # Datasets
-/data
+data/*
 
 # MacOS
 .DS_Store
