@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt # for KM plots
 from datetime import datetime # for file naming convention for exports
 import numpy as np # for scientific calculations
 import streamlit.components.v1 as components # for KM plot page anchor
-# import time # for page anchor scrolling
 import gseapy as gp # for ssGSEA calculation
 import threading # for accelerating the ssGSEA calculation
 import kaplanmeier as km # for kaplan meier plotting
 import statsmodels.api as sm # for hazard ratio calculations 
 import os # for KM plot downloading
+import requests
+import io
+import pyarrow.parquet as pq
 
 
 
@@ -438,113 +440,149 @@ def main():
     # Create a field for informational text
     st.write("Enter signature name, gene names, cancer types, and cut-point to generate ssGSEA scores and visualize survival outcomes with a Kaplan-Meier plot based on TCGA RNA and phenotype survival data.")
 
+
+    
+    # =======> .parquet
+    file_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.basic_phenotype.parquet"
+    # Download the file .parquet into memory
+    response = requests.get(file_url)
+    response.raise_for_status()  # Ensure the request was successful
+    # Use io.BytesIO to handle the binary content of the Parquet file
+    parquet_file = io.BytesIO(response.content)
+    # Read the .parquet file into a pandas dataframe using pyarrow
+    parquet_df = pq.read_table(parquet_file).to_pandas()
+    # Display or process the dataframe in Streamlit
+    st.dataframe(parquet_df.head())
+
+    # =======> .probeMap
+    # URL of the .probeMap file from GitHub Releases
+    probe_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/gencode.v22.annotation.gene.probeMap"
+    # Download the file .probeMap into memory
+    response = requests.get(probe_url)
+    response.raise_for_status()  # Ensure the request was successful
+    # Use io.StringIO to load the file content into memory and read it into a pandas dataframe
+    probe_map_file = io.StringIO(response.text)
+    # Read the .probeMap file into a pandas dataframe (adjust the delimiter based on the file format)
+    probe_df = pd.read_csv(probe_map_file, delimiter="\t")
+    # Display or process the dataframe in Streamlit
+    st.write(probe_df.head())
+
+
+
+
+
+
+
+
+
+
     # Call the load data method
-    df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet', 
-                                              './data/GDC-PANCAN.htseq_fpkm-uq_2.parquet',
-                                              './data/gencode.v22.annotation.gene.probeMap',
-                                              './data/GDC-PANCAN.survival.parquet', 
-                                              './data/GDC-PANCAN.basic_phenotype.parquet',
-                                             )
-    # Locate all gene names in a list
-    gene_names = df.index.unique()
+    # df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet', 
+    #                                           './data/GDC-PANCAN.htseq_fpkm-uq_2.parquet',
+    #                                           './data/gencode.v22.annotation.gene.probeMap',
+    #                                           './data/GDC-PANCAN.survival.parquet', 
+    #                                           './data/GDC-PANCAN.basic_phenotype.parquet',
+    #                                          )
+    # # Locate all gene names in a list
+    # gene_names = df.index.unique()
     
-    # Create a form for data input
-    with st.form("km_plot_form", clear_on_submit=False):
-        # Create a placeholder for form validation error correction
-        form_validation_placeholder = st.empty()
+    # # Create a form for data input
+    # with st.form("km_plot_form", clear_on_submit=False):
+    #     # Create a placeholder for form validation error correction
+    #     form_validation_placeholder = st.empty()
 
-        # Text input field for custom signature name
-        signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name", key='signature_name')
+    #     # Text input field for custom signature name
+    #     signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name", key='signature_name')
         
-        # Multiselect element for gene selection
-        genes_entered = st.multiselect(
-            "Gene Names:",
-            gene_names,
-            placeholder="Enter gene names",
-            key='genes_entered',
-        )
+    #     # Multiselect element for gene selection
+    #     genes_entered = st.multiselect(
+    #         "Gene Names:",
+    #         gene_names,
+    #         placeholder="Enter gene names",
+    #         key='genes_entered',
+    #     )
         
-        # Dropdown for cancer type
-        cancer_types = phenotype_df['project_id'].unique()
-        # TODO: add a PAN-Cancer option for all cancers?
-        cancer_types_entered = st.multiselect(
-            "Cancer Type:",
-            (cancer_types),
-            placeholder="Select cancer type",
-            key='cancer_types_entered',
-        )
+    #     # Dropdown for cancer type
+    #     cancer_types = phenotype_df['project_id'].unique()
+    #     # TODO: add a PAN-Cancer option for all cancers?
+    #     cancer_types_entered = st.multiselect(
+    #         "Cancer Type:",
+    #         (cancer_types),
+    #         placeholder="Select cancer type",
+    #         key='cancer_types_entered',
+    #     )
     
-        # Dropdown for cut-point
-        cut_point_entered = st.selectbox(
-            "Cut-Point:",
-            ("Median", "Tertile", "Tertile - Top & Bottom only", "Quartile", "Quartile - Top & Bottom only"),
-            index=None,
-            placeholder="Select cut-point",
-            key='cut_point_entered',
-        )
+    #     # Dropdown for cut-point
+    #     cut_point_entered = st.selectbox(
+    #         "Cut-Point:",
+    #         ("Median", "Tertile", "Tertile - Top & Bottom only", "Quartile", "Quartile - Top & Bottom only"),
+    #         index=None,
+    #         placeholder="Select cut-point",
+    #         key='cut_point_entered',
+    #     )
         
-        # Submit button
-        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
+    #     # Submit button
+    #     submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
         
-        # If the submit button was clicked, check that all fields are filled in
-        if submit_button:
-            # If not all fields are filled in
-            if not validate_form():
-                # Display red text form validation
-                with form_validation_placeholder:
-                    st.markdown("""
-                        <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
-                    """, unsafe_allow_html=True)
-            else:
-                # Auto scroll to ssGSEA calculation info message
-                auto_scroll()
+    #     # If the submit button was clicked, check that all fields are filled in
+    #     if submit_button:
+    #         # If not all fields are filled in
+    #         if not validate_form():
+    #             # Display red text form validation
+    #             with form_validation_placeholder:
+    #                 st.markdown("""
+    #                     <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
+    #                 """, unsafe_allow_html=True)
+    #         else:
+    #             # Auto scroll to ssGSEA calculation info message
+    #             auto_scroll()
 
-    # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
-    block_form_submit()
+    # # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
+    # block_form_submit()
 
-    # Apply CSS for custom styling
-    custom_css()
+    # # Apply CSS for custom styling
+    # custom_css()
 
-    # If the submit button was pressed and submitted successfully
-    if st.session_state.get('form_submitted', False):
-        # Calculate ssGSEA
-        ssgsea_info = st.info('Calculating ssGSEA scores...', icon="🔄")
-        ssgsea_scores = calculate_ssgsea(df, phenotype_df)
-        ssgsea_info.empty()
+    # # If the submit button was pressed and submitted successfully
+    # if st.session_state.get('form_submitted', False):
+    #     # Calculate ssGSEA
+    #     ssgsea_info = st.info('Calculating ssGSEA scores...', icon="🔄")
+    #     ssgsea_scores = calculate_ssgsea(df, phenotype_df)
+    #     ssgsea_info.empty()
         
-        # Create the kaplan meier results
-        km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
+    #     # Create the kaplan meier results
+    #     km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
 
-        # Scroll down once calculations complete
-        auto_scroll()
+    #     # Scroll down once calculations complete
+    #     auto_scroll()
         
-        # Display the results inside a container
-        with st.container(border=True):
-            # Display results subheader
-            st.subheader("Results")
+    #     # Display the results inside a container
+    #     with st.container(border=True):
+    #         # Display results subheader
+    #         st.subheader("Results")
             
-            # Use state sessions to get form values
-            signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
+    #         # Use state sessions to get form values
+    #         signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
             
-            # Display the entered form values for user
-            genes_entered_str = ", ".join(genes_entered)
-            cancer_types_entered_str = ", ".join(cancer_types_entered)
-            st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, 
-                     "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
-            st.divider()
+    #         # Display the entered form values for user
+    #         genes_entered_str = ", ".join(genes_entered)
+    #         cancer_types_entered_str = ", ".join(cancer_types_entered)
+    #         st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, 
+    #                  "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
+    #         st.divider()
 
-            # Create placeholders to hold the ssGSEA, KM plot and download button content
-            # ssgsea_placeholder = st.empty()
-            km_plot_placeholder = st.empty()
-            download_results_placeholder = st.empty()
-            # with ssgsea_placeholder:
-                # Display ssGSEA output
-                # st.dataframe(ssgsea_scores.head())
-            with km_plot_placeholder:
-                # Display the KM plot image created
-                st.pyplot(fig=km_plot_figure, use_container_width=True)
-            with download_results_placeholder:
-                st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
+    #         # Create placeholders to hold the ssGSEA, KM plot and download button content
+    #         # ssgsea_placeholder = st.empty()
+    #         km_plot_placeholder = st.empty()
+    #         download_results_placeholder = st.empty()
+    #         # with ssgsea_placeholder:
+    #             # Display ssGSEA output
+    #             # st.dataframe(ssgsea_scores.head())
+    #         with km_plot_placeholder:
+    #             # Display the KM plot image created
+    #             st.pyplot(fig=km_plot_figure, use_container_width=True)
+    #         with download_results_placeholder:
+    #             st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
     
 
 
