@@ -1,5 +1,5 @@
-# SIGvival
-A survival analysis tool.
+# TCGA SIGvival
+A TCGA survival analysis tool, using `ssGSEA` to calculate gene signature scores, and `kaplanmeier` python package to plot kaplan meier plots.
 
 ---
 

@@ -18,22 +18,13 @@ import pyarrow.parquet as pq
 
 # ------------------------------------ DATA ------------------------------------
 @st.cache_data
-def load_data(rna_filename1, rna_filename2, gene_mapping_filename, survival_filename, phenotype_filename):
+def load_data():
     """
-    Loads all RNA, Gene Mapping, Survival, and Phenotype data files. Uses st.cache_data decorator to cache the dataframes.
+    Loads all RNA, Gene Mapping, Survival, and Phenotype data files from GitHub Releases. Uses st.cache_data decorator to cache the dataframes.
 
     Parameters
     ----------
-    rna_filename1 : str
-        First half of the RNA filename string.
-    rna_filename2 : str
-        Second half of the RNA filename string.
-    gene_mapping_filename : str
-        Gene mapping filename string.
-    survival_filename : str
-        Survival filename string.
-    phenotype_filename : str
-        Phenotype filename string.
+    None.
 
     Returns
     -------
@@ -44,24 +35,64 @@ def load_data(rna_filename1, rna_filename2, gene_mapping_filename, survival_file
     phenotype_filtered_ordered_df : pandas DataFrame
         Phenotype dataframe filtered for common samples, and reordered to RNA ordering
     """
-    # Read in both RNA matrices and concatenate the files into one
-    df_1 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet')
-    df_2 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_2.parquet')
+
+    # Read in both RNA matrices (split for data storage purposes)
+    rna_url1 = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.htseq_fpkm-uq_1.parquet"
+    # Download the file .parquet into memory
+    response = requests.get(rna_url1)
+    response.raise_for_status()  # Ensure the request was successful
+    # io.BytesIO used to handle the binary content of the parquet file
+    rna_file1 = io.BytesIO(response.content)
+    # Read the .parquet file into a pandas dataframe using pyarrow
+    df_1 = pq.read_table(rna_file1).to_pandas()
+    
+    rna_url2 = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.htseq_fpkm-uq_2.parquet"
+    # Download the file .parquet into memory
+    response = requests.get(rna_url2)
+    response.raise_for_status() # Ensure the request was successful
+    # io.BytesIO used to handle the binary content of the parquet file
+    rna_file2 = io.BytesIO(response.content)
+    # Read the .parquet file into a pandas dataframe using pyarrow
+    df_2 = pq.read_table(rna_file2).to_pandas()
+
+    # Concatenate the two RNA files into one
     df = pd.concat([df_1, df_2], axis=1)
     
     # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
-    mapping = pd.read_csv(gene_mapping_filename, sep='\t')
+    mapping_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/gencode.v22.annotation.gene.probeMap"
+    # Download the file .probeMap into memory
+    response = requests.get(mapping_url)
+    response.raise_for_status()  # Ensure the request was successful
+    # Use io.StringIO to load the file content into memory and read it into a pandas dataframe
+    mapping_file = io.StringIO(response.text)
+    # Read the .probeMap file into a pandas dataframe (adjust the delimiter based on the file format)
+    mapping = pd.read_csv(mapping_file, delimiter="\t")
     mapping.rename(columns={'id': 'xena_sample'}, inplace=True) # rename column to merge on
     merged_df = pd.merge(mapping, df, on='xena_sample', how='outer', indicator=True) # merge the dataframes to map gene names
 
     # Ensure the expression dataframe is in the format: indexed on gene names column labels as sample ids
-    merged_trimmed_df = merged_df
+    merged_trimmed_df = merged_df.copy()
     merged_trimmed_df.drop(columns=['xena_sample', 'chrom', 'chromStart', 'chromEnd', 'strand', '_merge'], axis=1, inplace=True)
     merged_trimmed_df.set_index('gene', inplace=True)
     
     # Load in survival and phenotype dataframes
-    survival_df = pd.read_parquet(survival_filename)
-    phenotype_df = pd.read_parquet(phenotype_filename)
+    survival_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.survival.parquet"
+    # Download the file .parquet into memory
+    response = requests.get(survival_url)
+    response.raise_for_status()  # Ensure the request was successful
+    # Use io.BytesIO to handle the binary content of the Parquet file
+    survival_file = io.BytesIO(response.content)
+    # Read the .parquet file into a pandas dataframe using pyarrow
+    survival_df = pq.read_table(survival_file).to_pandas()
+
+    phenotype_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.basic_phenotype.parquet"
+    # Download the file .parquet into memory
+    response = requests.get(phenotype_url)
+    response.raise_for_status()  # Ensure the request was successful
+    # Use io.BytesIO to handle the binary content of the Parquet file
+    phenotype_file = io.BytesIO(response.content)
+    # Read the .parquet file into a pandas dataframe using pyarrow
+    phenotype_df = pq.read_table(phenotype_file).to_pandas()    
 
     # Create a list of all samples in each dataframe
     samples_rna = list(merged_trimmed_df.columns)
@@ -434,155 +465,115 @@ def main():
     """
     # App title
     st.title("TCGA SIGvival")
-    st.write(f"*Erin Cameron    |    [GitHub](https://github.com/erincameron11/survival-analysis-tool)*")
+    st.write(f"*Erin Cameron | [GitHub](https://github.com/erincameron11/survival-analysis-tool)*")
     st.divider()
     
     # Create a field for informational text
     st.write("Enter signature name, gene names, cancer types, and cut-point to generate ssGSEA scores and visualize survival outcomes with a Kaplan-Meier plot based on TCGA RNA and phenotype survival data.")
 
-
-    
-    # =======> .parquet
-    file_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.basic_phenotype.parquet"
-    # Download the file .parquet into memory
-    response = requests.get(file_url)
-    response.raise_for_status()  # Ensure the request was successful
-    # Use io.BytesIO to handle the binary content of the Parquet file
-    parquet_file = io.BytesIO(response.content)
-    # Read the .parquet file into a pandas dataframe using pyarrow
-    parquet_df = pq.read_table(parquet_file).to_pandas()
-    # Display or process the dataframe in Streamlit
-    st.dataframe(parquet_df.head())
-
-    # =======> .probeMap
-    # URL of the .probeMap file from GitHub Releases
-    probe_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/gencode.v22.annotation.gene.probeMap"
-    # Download the file .probeMap into memory
-    response = requests.get(probe_url)
-    response.raise_for_status()  # Ensure the request was successful
-    # Use io.StringIO to load the file content into memory and read it into a pandas dataframe
-    probe_map_file = io.StringIO(response.text)
-    # Read the .probeMap file into a pandas dataframe (adjust the delimiter based on the file format)
-    probe_df = pd.read_csv(probe_map_file, delimiter="\t")
-    # Display or process the dataframe in Streamlit
-    st.write(probe_df.head())
-
-
-
-
-
-
-
-
-
-
     # Call the load data method
-    # df, survival_df, phenotype_df = load_data('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet', 
-    #                                           './data/GDC-PANCAN.htseq_fpkm-uq_2.parquet',
-    #                                           './data/gencode.v22.annotation.gene.probeMap',
-    #                                           './data/GDC-PANCAN.survival.parquet', 
-    #                                           './data/GDC-PANCAN.basic_phenotype.parquet',
-    #                                          )
-    # # Locate all gene names in a list
-    # gene_names = df.index.unique()
+    df, survival_df, phenotype_df = load_data()
     
-    # # Create a form for data input
-    # with st.form("km_plot_form", clear_on_submit=False):
-    #     # Create a placeholder for form validation error correction
-    #     form_validation_placeholder = st.empty()
-
-    #     # Text input field for custom signature name
-    #     signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name", key='signature_name')
-        
-    #     # Multiselect element for gene selection
-    #     genes_entered = st.multiselect(
-    #         "Gene Names:",
-    #         gene_names,
-    #         placeholder="Enter gene names",
-    #         key='genes_entered',
-    #     )
-        
-    #     # Dropdown for cancer type
-    #     cancer_types = phenotype_df['project_id'].unique()
-    #     # TODO: add a PAN-Cancer option for all cancers?
-    #     cancer_types_entered = st.multiselect(
-    #         "Cancer Type:",
-    #         (cancer_types),
-    #         placeholder="Select cancer type",
-    #         key='cancer_types_entered',
-    #     )
+    # Locate all gene names in a list
+    gene_names = df.index.unique()
     
-    #     # Dropdown for cut-point
-    #     cut_point_entered = st.selectbox(
-    #         "Cut-Point:",
-    #         ("Median", "Tertile", "Tertile - Top & Bottom only", "Quartile", "Quartile - Top & Bottom only"),
-    #         index=None,
-    #         placeholder="Select cut-point",
-    #         key='cut_point_entered',
-    #     )
-        
-    #     # Submit button
-    #     submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
-        
-    #     # If the submit button was clicked, check that all fields are filled in
-    #     if submit_button:
-    #         # If not all fields are filled in
-    #         if not validate_form():
-    #             # Display red text form validation
-    #             with form_validation_placeholder:
-    #                 st.markdown("""
-    #                     <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
-    #                 """, unsafe_allow_html=True)
-    #         else:
-    #             # Auto scroll to ssGSEA calculation info message
-    #             auto_scroll()
+    # Create a form for data input
+    with st.form("km_plot_form", clear_on_submit=False):
+        # Create a placeholder for form validation error correction
+        form_validation_placeholder = st.empty()
 
-    # # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
-    # block_form_submit()
-
-    # # Apply CSS for custom styling
-    # custom_css()
-
-    # # If the submit button was pressed and submitted successfully
-    # if st.session_state.get('form_submitted', False):
-    #     # Calculate ssGSEA
-    #     ssgsea_info = st.info('Calculating ssGSEA scores...', icon="🔄")
-    #     ssgsea_scores = calculate_ssgsea(df, phenotype_df)
-    #     ssgsea_info.empty()
+        # Text input field for custom signature name
+        signature_name = st.text_input("Signature Name:", value="", placeholder="Enter signature name", key='signature_name')
         
-    #     # Create the kaplan meier results
-    #     km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
-
-    #     # Scroll down once calculations complete
-    #     auto_scroll()
+        # Multiselect element for gene selection
+        genes_entered = st.multiselect(
+            "Gene Names:",
+            gene_names,
+            placeholder="Enter gene names",
+            key='genes_entered',
+        )
         
-    #     # Display the results inside a container
-    #     with st.container(border=True):
-    #         # Display results subheader
-    #         st.subheader("Results")
+        # Dropdown for cancer type
+        cancer_types = phenotype_df['project_id'].unique()
+        # TODO: add a PAN-Cancer option for all cancers?
+        cancer_types_entered = st.multiselect(
+            "Cancer Type:",
+            (cancer_types),
+            placeholder="Select cancer type",
+            key='cancer_types_entered',
+        )
+    
+        # Dropdown for cut-point
+        cut_point_entered = st.selectbox(
+            "Cut-Point:",
+            ("Median", "Tertile", "Tertile - Top & Bottom only", "Quartile", "Quartile - Top & Bottom only"),
+            index=None,
+            placeholder="Select cut-point",
+            key='cut_point_entered',
+        )
+        
+        # Submit button
+        submit_button = st.form_submit_button(":chart_with_downwards_trend: Create KM Plot", on_click=handle_submit)
+        
+        # If the submit button was clicked, check that all fields are filled in
+        if submit_button:
+            # If not all fields are filled in
+            if not validate_form():
+                # Display red text form validation
+                with form_validation_placeholder:
+                    st.markdown("""
+                        <p style='color:#cc0000; text-align:center;'>Please fill out all fields</p>
+                    """, unsafe_allow_html=True)
+            else:
+                # Auto scroll to ssGSEA calculation info message
+                auto_scroll()
+
+    # Block the form from submitting on Enter press with text_input (built-in streamlit functionality)
+    block_form_submit()
+
+    # Apply CSS for custom styling
+    custom_css()
+
+    # If the submit button was pressed and submitted successfully
+    if st.session_state.get('form_submitted', False):
+        # Calculate ssGSEA
+        ssgsea_info = st.info('Calculating ssGSEA scores...', icon="🔄")
+        ssgsea_scores = calculate_ssgsea(df, phenotype_df)
+        ssgsea_info.empty()
+        
+        # Create the kaplan meier results
+        km_plot_figure = create_km_plot(ssgsea_scores, survival_df)
+
+        # Scroll down once calculations complete
+        auto_scroll()
+        
+        # Display the results inside a container
+        with st.container(border=True):
+            # Display results subheader
+            st.subheader("Results")
             
-    #         # Use state sessions to get form values
-    #         signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
+            # Use state sessions to get form values
+            signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
             
-    #         # Display the entered form values for user
-    #         genes_entered_str = ", ".join(genes_entered)
-    #         cancer_types_entered_str = ", ".join(cancer_types_entered)
-    #         st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, 
-    #                  "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
-    #         st.divider()
+            # Display the entered form values for user
+            genes_entered_str = ", ".join(genes_entered)
+            cancer_types_entered_str = ", ".join(cancer_types_entered)
+            st.write("**Signature Name**: ", signature_name, "  \n**Gene Names**: ", genes_entered_str, 
+                     "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
+            st.divider()
 
-    #         # Create placeholders to hold the ssGSEA, KM plot and download button content
-    #         # ssgsea_placeholder = st.empty()
-    #         km_plot_placeholder = st.empty()
-    #         download_results_placeholder = st.empty()
-    #         # with ssgsea_placeholder:
-    #             # Display ssGSEA output
-    #             # st.dataframe(ssgsea_scores.head())
-    #         with km_plot_placeholder:
-    #             # Display the KM plot image created
-    #             st.pyplot(fig=km_plot_figure, use_container_width=True)
-    #         with download_results_placeholder:
-    #             st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
+            # Create placeholders to hold the ssGSEA, KM plot and download button content
+            # ssgsea_placeholder = st.empty()
+            km_plot_placeholder = st.empty()
+            download_results_placeholder = st.empty()
+            # with ssgsea_placeholder:
+                # Display ssGSEA output
+                # st.dataframe(ssgsea_scores.head())
+            with km_plot_placeholder:
+                # Display the KM plot image created
+                st.pyplot(fig=km_plot_figure, use_container_width=True)
+            with download_results_placeholder:
+                st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
     
 
 
