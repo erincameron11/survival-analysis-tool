@@ -10,9 +10,6 @@ import threading # for accelerating the ssGSEA calculation
 import kaplanmeier as km # for kaplan meier plotting
 import statsmodels.api as sm # for hazard ratio calculations 
 import os # for KM plot downloading
-import requests
-import io
-import pyarrow.parquet as pq
 
 
 
@@ -20,7 +17,7 @@ import pyarrow.parquet as pq
 @st.cache_data
 def load_data():
     """
-    Loads all RNA, Gene Mapping, Survival, and Phenotype data files from GitHub Releases. Uses st.cache_data decorator to cache the dataframes.
+    Loads all RNA, Gene Mapping, Survival, and Phenotype data files. Uses st.cache_data decorator to cache the dataframes.
 
     Parameters
     ----------
@@ -35,38 +32,16 @@ def load_data():
     phenotype_filtered_ordered_df : pandas DataFrame
         Phenotype dataframe filtered for common samples, and reordered to RNA ordering
     """
-
-    # Read in both RNA matrices (split for data storage purposes)
-    rna_url1 = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.htseq_fpkm-uq_1.parquet"
-    # Download the file .parquet into memory
-    response = requests.get(rna_url1)
-    response.raise_for_status()  # Ensure the request was successful
-    # io.BytesIO used to handle the binary content of the parquet file
-    rna_file1 = io.BytesIO(response.content)
-    # Read the .parquet file into a pandas dataframe using pyarrow
-    df_1 = pq.read_table(rna_file1).to_pandas()
     
-    rna_url2 = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.htseq_fpkm-uq_2.parquet"
-    # Download the file .parquet into memory
-    response = requests.get(rna_url2)
-    response.raise_for_status() # Ensure the request was successful
-    # io.BytesIO used to handle the binary content of the parquet file
-    rna_file2 = io.BytesIO(response.content)
-    # Read the .parquet file into a pandas dataframe using pyarrow
-    df_2 = pq.read_table(rna_file2).to_pandas()
-
+    # Read in both RNA matrices (split for data storage purposes)
+    df_1 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet')
+    df_2 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_2.parquet')
+    
     # Concatenate the two RNA files into one
     df = pd.concat([df_1, df_2], axis=1)
     
     # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
-    mapping_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/gencode.v22.annotation.gene.probeMap"
-    # Download the file .probeMap into memory
-    response = requests.get(mapping_url)
-    response.raise_for_status()  # Ensure the request was successful
-    # Use io.StringIO to load the file content into memory and read it into a pandas dataframe
-    mapping_file = io.StringIO(response.text)
-    # Read the .probeMap file into a pandas dataframe (adjust the delimiter based on the file format)
-    mapping = pd.read_csv(mapping_file, delimiter="\t")
+    mapping = pd.read_parquet('./data/gencode.v22.annotation.gene.parquet')
     mapping.rename(columns={'id': 'xena_sample'}, inplace=True) # rename column to merge on
     merged_df = pd.merge(mapping, df, on='xena_sample', how='outer', indicator=True) # merge the dataframes to map gene names
 
@@ -76,23 +51,8 @@ def load_data():
     merged_trimmed_df.set_index('gene', inplace=True)
     
     # Load in survival and phenotype dataframes
-    survival_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.survival.parquet"
-    # Download the file .parquet into memory
-    response = requests.get(survival_url)
-    response.raise_for_status()  # Ensure the request was successful
-    # Use io.BytesIO to handle the binary content of the Parquet file
-    survival_file = io.BytesIO(response.content)
-    # Read the .parquet file into a pandas dataframe using pyarrow
-    survival_df = pq.read_table(survival_file).to_pandas()
-
-    phenotype_url = "https://github.com/erincameron11/survival-analysis-tool/releases/download/tcga-survival-data-v1.0/GDC-PANCAN.basic_phenotype.parquet"
-    # Download the file .parquet into memory
-    response = requests.get(phenotype_url)
-    response.raise_for_status()  # Ensure the request was successful
-    # Use io.BytesIO to handle the binary content of the Parquet file
-    phenotype_file = io.BytesIO(response.content)
-    # Read the .parquet file into a pandas dataframe using pyarrow
-    phenotype_df = pq.read_table(phenotype_file).to_pandas()    
+    survival_df = pd.read_parquet('./data/GDC-PANCAN.survival.parquet')
+    phenotype_df = pd.read_parquet('./data/GDC-PANCAN.basic_phenotype.parquet')
 
     # Create a list of all samples in each dataframe
     samples_rna = list(merged_trimmed_df.columns)
@@ -464,8 +424,8 @@ def main():
     None
     """
     # App title
-    st.title("TCGA SIGvival")
-    st.write(f"*Erin Cameron | [GitHub](https://github.com/erincameron11/survival-analysis-tool)*")
+    st.title(":dna: TCGA SIGvival")
+    st.write(f"*Erin Cameron &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; [GitHub](https://github.com/erincameron11/survival-analysis-tool)*")
     st.divider()
     
     # Create a field for informational text

@@ -5,8 +5,9 @@
 *.tsv
 *.probeMap
 
-# Datasets
-data/*
+# Large Datasets
+data/GDC-PANCAN.htseq_fpkm-uq_1.parquet
+data/GDC-PANCAN.htseq_fpkm-uq_2.parquet
 
 # MacOS
 .DS_Store
