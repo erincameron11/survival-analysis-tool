@@ -8,9 +8,10 @@
 # Large Datasets
 data/GDC-PANCAN.htseq_fpkm-uq_1.parquet
 data/GDC-PANCAN.htseq_fpkm-uq_2.parquet
-FilesizeReduction.ipynb
 data/GDC-PANCAN.htseq_fpkm-uq.parquet
 data/GDC-PANCAN.htseq_fpkm-uq_float16.parquet
+data/GDC-PANCAN.htseq_fpkm-uq_float16.parquet.zip
+FilesizeReduction.ipynb
 
 # MacOS
 .DS_Store
