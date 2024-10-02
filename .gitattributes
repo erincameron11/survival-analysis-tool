@@ -1,0 +1,2 @@
+data/GDC-PANCAN.htseq_fpkm-uq_float16.parquet.zip filter=lfs diff=lfs merge=lfs -text
+* !text !filter !merge !diff
