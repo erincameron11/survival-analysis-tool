@@ -424,7 +424,7 @@ def main():
     None
     """
     # App title
-    st.title(":dna: TCGA SIGvival")
+    st.title(":dna:TCGA SIGvival")
     st.write(f"*Erin Cameron &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; [GitHub](https://github.com/erincameron11/survival-analysis-tool)*")
     st.divider()
     
