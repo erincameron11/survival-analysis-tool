@@ -187,13 +187,13 @@ def calculate_ssgsea(df, phenotype_df):
     n_threads=threading.active_count()-1
 
     # Get a list of samples for cancer types
-    cancer_type_samples = list(phenotype_df.query('project_id in @cancer_types_entered')['sample'])
+    # cancer_type_samples = list(phenotype_df.query('project_id in @cancer_types_entered')['sample'])
     # Subset the original RNA count matrix to only have samples in selected cancer types
-    subset_counts = df.loc[: , cancer_type_samples]
+    # subset_counts = df.loc[: , cancer_type_samples]
     
     # Calculate the ssGSEA scores
-    scores = gp.ssgsea(data=subset_counts, gene_sets=signature, outdir=None, 
-               sample_norm_method='rank', threads=n_threads, min_size=0,
+    scores = gp.ssgsea(data=df, gene_sets=signature, outdir=None, 
+               sample_norm_method='rank', threads=n_threads, min_size=3,
                verbose=True)
     return scores.res2d
 
