@@ -6,14 +6,8 @@
 *.probeMap
 
 # Large Datasets
-data/GDC-PANCAN.htseq_fpkm-uq_1.parquet
-data/GDC-PANCAN.htseq_fpkm-uq_2.parquet
 data/GDC-PANCAN.htseq_fpkm-uq.parquet
 data/GDC-PANCAN.htseq_fpkm-uq_float16.parquet
-data/GDC-PANCAN.htseq_fpkm-uq_float16.parquet.zip
-data/GDC-PANCAN.htseq_fpkm-uq_TCGA-BRCA.parquet
-data/GDC-PANCAN.htseq_fpkm-uq_TCGA-BRCA_1.parquet
-data/GDC-PANCAN.htseq_fpkm-uq_TCGA-BRCA_2.parquet
 FilesizeReduction.ipynb
 
 # MacOS
