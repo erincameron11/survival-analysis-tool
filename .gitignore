@@ -1,5 +1,6 @@
 # Jupyter Lab
 .ipynb_checkpoints
+FilesizeReduction.ipynb
 
 # Filetypes
 *.tsv
@@ -8,7 +9,8 @@
 # Large Datasets
 data/GDC-PANCAN.htseq_fpkm-uq.parquet
 data/GDC-PANCAN.htseq_fpkm-uq_float16.parquet
-FilesizeReduction.ipynb
+data/GDC-PANCAN.survival.parquet
+data/GDC-PANCAN.basic_phenotype.parquet
 
 # MacOS
 .DS_Store

@@ -32,47 +32,64 @@ def load_data():
     phenotype_filtered_ordered_df : pandas DataFrame
         Phenotype dataframe filtered for common samples, and reordered to RNA ordering
     """
+    # Load the smallest cancer type dataset to gather the gene names
+    gene_names_df = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_TCGA-CHOL.parquet')
+    gene_names = gene_names_df.index.tolist()
     
-    # Read in both RNA matrices (split for data storage purposes)
-    df_1 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet')
-    df_2 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_2.parquet')
-    
-    # Concatenate the two RNA files into one
-    df = pd.concat([df_1, df_2], axis=1)
-    
-    # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
-    mapping = pd.read_parquet('./data/gencode.v22.annotation.gene.parquet')
-    mapping.rename(columns={'id': 'xena_sample'}, inplace=True) # rename column to merge on
-    merged_df = pd.merge(mapping, df, on='xena_sample', how='outer', indicator=True) # merge the dataframes to map gene names
+    # Load the phenotype dataset to gather the cancer types
+    phenotype_df = pd.read_parquet('./data/GDC-PANCAN.basic_phenotype_processed.parquet')
+    cancer_types = phenotype_df['project_id'].unique()
 
-    # Ensure the expression dataframe is in the format: indexed on gene names column labels as sample ids
-    merged_trimmed_df = merged_df.copy()
-    merged_trimmed_df.drop(columns=['xena_sample', 'chrom', 'chromStart', 'chromEnd', 'strand', '_merge'], axis=1, inplace=True)
-    merged_trimmed_df.set_index('gene', inplace=True)
-    
-    # Load in survival and phenotype dataframes
-    survival_df = pd.read_parquet('./data/GDC-PANCAN.survival.parquet')
-    phenotype_df = pd.read_parquet('./data/GDC-PANCAN.basic_phenotype.parquet')
+    # Load the survival dataset
+    survival_df = pd.read_parquet('./data/GDC-PANCAN.survival_processed.parquet')
 
-    # Create a list of all samples in each dataframe
-    samples_rna = list(merged_trimmed_df.columns)
-    samples_pheno = list(phenotype_df['sample'].values)
-    samples_survival = list(survival_df['sample'].values)
+
+
+
     
-    # Find all common samples in all three lists
-    common_samples = list(set(samples_rna) & set(samples_pheno) & set(samples_survival))
     
-    # Subset and reorder all three datasets by common_samples
-    merged_trimmed_filtered_df = merged_trimmed_df[common_samples] # Filter merged_df by columns in common_samples
-    phenotype_filtered_df = phenotype_df[phenotype_df['sample'].isin(common_samples)]
-    survival_filtered_df = survival_df[survival_df['sample'].isin(common_samples)]
+    # # Read in both RNA matrices (split for data storage purposes)
+    # df_1 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_1.parquet')
+    # df_2 = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_2.parquet')
     
-    # Reorder phenotype and survival dataframes to match the columns of the rna matrix
-    column_order = list(merged_trimmed_filtered_df.columns)
-    phenotype_filtered_ordered_df = phenotype_filtered_df.set_index('sample').loc[column_order].reset_index()
-    survival_filtered_ordered_df = survival_filtered_df.set_index('sample').loc[column_order].reset_index()
+    # # Concatenate the two RNA files into one
+    # df = pd.concat([df_1, df_2], axis=1)
     
-    return merged_trimmed_filtered_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
+    # # Load in the ID/Gene Mapping file and create a merged dataframe to map the RNA IDs to the gene names
+    # mapping = pd.read_parquet('./data/gencode.v22.annotation.gene.parquet')
+    # mapping.rename(columns={'id': 'xena_sample'}, inplace=True) # rename column to merge on
+    # merged_df = pd.merge(mapping, df, on='xena_sample', how='outer', indicator=True) # merge the dataframes to map gene names
+
+    # # Ensure the expression dataframe is in the format: indexed on gene names column labels as sample ids
+    # merged_trimmed_df = merged_df.copy()
+    # merged_trimmed_df.drop(columns=['xena_sample', 'chrom', 'chromStart', 'chromEnd', 'strand', '_merge'], axis=1, inplace=True)
+    # merged_trimmed_df.set_index('gene', inplace=True)
+    
+    # # Load in survival and phenotype dataframes
+    # survival_df = pd.read_parquet('./data/GDC-PANCAN.survival.parquet')
+    # phenotype_df = pd.read_parquet('./data/GDC-PANCAN.basic_phenotype.parquet')
+
+    # # Create a list of all samples in each dataframe
+    # samples_rna = list(merged_trimmed_df.columns)
+    # samples_pheno = list(phenotype_df['sample'].values)
+    # samples_survival = list(survival_df['sample'].values)
+    
+    # # Find all common samples in all three lists
+    # common_samples = list(set(samples_rna) & set(samples_pheno) & set(samples_survival))
+    
+    # # Subset and reorder all three datasets by common_samples
+    # merged_trimmed_filtered_df = merged_trimmed_df[common_samples] # Filter merged_df by columns in common_samples
+    # phenotype_filtered_df = phenotype_df[phenotype_df['sample'].isin(common_samples)]
+    # survival_filtered_df = survival_df[survival_df['sample'].isin(common_samples)]
+    
+    # # Reorder phenotype and survival dataframes to match the columns of the rna matrix
+    # column_order = list(merged_trimmed_filtered_df.columns)
+    # phenotype_filtered_ordered_df = phenotype_filtered_df.set_index('sample').loc[column_order].reset_index()
+    # survival_filtered_ordered_df = survival_filtered_df.set_index('sample').loc[column_order].reset_index()
+    
+    # return merged_trimmed_filtered_df, survival_filtered_ordered_df, phenotype_filtered_ordered_df
+
+    return gene_names, cancer_types, phenotype_df, survival_df
 
 
 
@@ -116,6 +133,34 @@ def validate_form():
         return True
     else:
         return False
+
+
+def create_rna_matrix(cancer_types_entered):
+    # Identify folder where the files are stored
+    data_folder = './data/'
+    # Define an empty list to hold all the loaded DataFrames
+    df_list = []
+    
+    # Loop through each cancer type
+    for cancer_type in cancer_types_entered:
+        # Construct the file name pattern to look for
+        file_name = f'GDC-PANCAN.htseq_fpkm-uq_{cancer_type}.parquet'
+        file_path = os.path.join(data_folder, file_name)
+
+        # TCGA-BRCA was separated into 2 separate files for file size considerations
+        if cancer_type == 'TCGA-BRCA':
+            # Read the two parquet files
+            df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}_1.parquet')
+            df_list.append(df)
+            df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}_2.parquet')
+            df_list.append(df)
+        else:
+            df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}.parquet')
+            df_list.append(df)
+            
+    df = pd.concat(df_list, axis=1)
+
+    return df
 
 
 def calculate_ssgsea(df, phenotype_df):
@@ -432,10 +477,11 @@ def main():
     st.write("Enter signature name, gene names, cancer types, and cut-point to generate ssGSEA scores and visualize survival outcomes with a Kaplan-Meier plot based on TCGA RNA and phenotype survival data.")
 
     # Call the load data method
-    df, survival_df, phenotype_df = load_data()
+    # df, survival_df, phenotype_df = load_data()
+    gene_names, cancer_types, phenotype_df, survival_df = load_data()
     
     # Locate all gene names in a list
-    gene_names = df.index.unique()
+    # gene_names = df.index.unique()
     
     # Create a form for data input
     with st.form("km_plot_form", clear_on_submit=False):
@@ -454,7 +500,7 @@ def main():
         )
         
         # Dropdown for cancer type
-        cancer_types = phenotype_df['project_id'].unique()
+        # cancer_types = phenotype_df['project_id'].unique()
         # TODO: add a PAN-Cancer option for all cancers?
         cancer_types_entered = st.multiselect(
             "Cancer Type:",
@@ -496,6 +542,8 @@ def main():
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
+        df = create_rna_matrix(cancer_types_entered)
+        
         # Calculate ssGSEA
         ssgsea_info = st.info('Calculating ssGSEA scores...', icon="🔄")
         ssgsea_scores = calculate_ssgsea(df, phenotype_df)
