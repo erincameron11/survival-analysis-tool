@@ -193,7 +193,7 @@ def calculate_ssgsea(df, phenotype_df):
     
     # Calculate the ssGSEA scores
     scores = gp.ssgsea(data=df, gene_sets=signature, outdir=None, 
-               sample_norm_method='rank', threads=n_threads, min_size=3,
+               sample_norm_method='rank', threads=n_threads, min_size=1,
                verbose=True)
     return scores.res2d
 
