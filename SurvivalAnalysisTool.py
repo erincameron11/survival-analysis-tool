@@ -19,20 +19,22 @@ import gc # TESTING -- for garbage collection of unused objects
 @st.cache_data
 def load_data():
     """
-    Loads all RNA, Gene Mapping, Survival, and Phenotype data files. Uses st.cache_data decorator to cache the dataframes.
+    Loads gene names and cancer types, as well as survival, and phenotype data files. Uses st.cache_data decorator to cache the DataFrames.
 
     Parameters
     ----------
-    None.
+    None
 
     Returns
     -------
-    merged_trimmed_filtered_df : pandas DataFrame
-        RNA dataframe with mapped gene names, and filtered for common samples
-    survival_filtered_ordered_df : pandas DataFrame
-        Survival dataframe filtered for common samples, and reordered to RNA ordering
-    phenotype_filtered_ordered_df : pandas DataFrame
-        Phenotype dataframe filtered for common samples, and reordered to RNA ordering
+    gene_names : list (str)
+        A list of all gene names from the RNA dataset.
+    cancer_types : list (str)
+        A list of all cancer types from the phenotype dataset.
+    phenotype_df : pandas DataFrame
+        Phenotype DataFrame filtered for common samples, and reordered to RNA ordering.
+    survival_df : pandas DataFrame
+        Survival DataFrame filtered for common samples, and reordered to RNA ordering.
     """
     # Load the smallest cancer type dataset to gather the gene names
     gene_names_df = pd.read_parquet('./data/GDC-PANCAN.htseq_fpkm-uq_TCGA-CHOL.parquet')
@@ -98,7 +100,20 @@ def validate_form():
         return False
 
 
-def create_rna_matrix(cancer_types_entered):
+def create_rna_dataframe(cancer_types_entered):
+    """
+    Generates an RNA DataFrame by reading in and concatenating datasets for the user-selected cancer types.
+
+    Parameters
+    ----------
+    cancer_types_entered : list (str)
+        A list of cancer types selected by the user.
+
+    Returns
+    -------
+    df : pandas DataFrame
+        The RNA DataFrame constructed using selected cancer types.
+    """
     # Identify folder where the files are stored
     data_folder = './data/'
     # Define an empty list to hold all the loaded DataFrames
@@ -136,12 +151,14 @@ def calculate_ssgsea(df, phenotype_df):
     Parameters
     ----------
     df : pandas DataFrame
-        RNA dataframe.
+        RNA DataFrame.
+    phenotype_df : pandas DataFrame
+        Phenotype DataFrame.
 
     Returns
     -------
-    scores : gseapy.ssgsea.SingleSampleGSEA
-        ssGSEA dataframe output with score values.
+    scores.res2d : pandas DataFrame
+        ssGSEA DataFrame output with score values.
     """
     # Use state sessions to get form values
     signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
@@ -165,16 +182,19 @@ def calculate_ssgsea(df, phenotype_df):
 
 def create_km_plot(ssgsea_scores, survival_df):
     """
-    Creates a Kaplan Meier plot output and saves to file.
+    Creates a Kaplan Meier plot output.
 
     Parameters
     ----------
-    path : str
-        RNA filename string.
+    ssgsea_scores : pandas DataFrame
+        ssGSEA DataFrame output with score values.
+    survival_df : pandas DataFrame
+        Survival DataFrame.
 
     Returns
     -------
-    None
+    km_plot_figure : matplotlib.figure.Figure
+        The Kaplan Meier plot figure object.
     """
     # Use state sessions to get form values
     signature_name, genes_entered, cancer_types_entered, cut_point_entered = get_form_values()
@@ -245,11 +265,14 @@ def create_km_plot(ssgsea_scores, survival_df):
 
 def download_output(ssgsea_scores, km_plot_figure):
     """
-    Downloads ssGSEA data to CSV file and KM plot to PNG on the users' local machine.
+    Downloads ssGSEA data to CSV file and KM plot to PNG on the users' local machine Downloads folder.
 
     Parameters
     ----------
-    None
+    ssgsea_scores : pandas DataFrame
+        ssGSEA DataFrame output with score values.
+    km_plot_figure : matplotlib.figure.Figure
+        The Kaplan Meier plot figure object.
 
     Returns
     -------
@@ -261,15 +284,13 @@ def download_output(ssgsea_scores, km_plot_figure):
     downloads_folder = str(Path.home() / "Downloads")
     
     # ssGSEA export into CSV format
-    # Create the full path for the ssGSEA scores
+    # Create the full path for the ssGSEA scores and output to CSV
     ssgsea_file_path = os.path.join(downloads_folder, f'ssgsea_scores_{today}.csv')
-    # Output to CSV to the specified filepath
     ssgsea_scores.to_csv(ssgsea_file_path, index=False)
 
     # KM plot export
-    # Create the full path for the KM plot
+    # Create the full path for the KM plot and output file
     km_file_path = os.path.join(downloads_folder, f'km_plot_{today}.png')
-    # Save KM plot to the file path
     km_plot_figure.savefig(km_file_path, bbox_inches='tight')
 
 
@@ -331,9 +352,9 @@ def get_form_values():
     -------
     signature_name : str
         Custom name of the signature entered by user.
-    genes_entered : list
+    genes_entered : list (str)
         1 or more genes selected by the user.
-    cancer_types_entered : list
+    cancer_types_entered : list (str)
         1 or more cancer types selected by user.
     cut_point_entered : str
         Cut-point selected by user.
@@ -531,7 +552,7 @@ def main():
 
     # If the submit button was pressed and submitted successfully
     if st.session_state.get('form_submitted', False):
-        df = create_rna_matrix(cancer_types_entered)
+        df = create_rna_dataframe(cancer_types_entered)
 
         # <%%%%%%%%%% TESTING
         memory_before = get_memory_usage()
