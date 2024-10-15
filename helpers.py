@@ -54,6 +54,7 @@ def validate_form():
     if signature_name and genes_entered and cancer_types_entered and cut_point_entered:
         # Garbage collection of unused objects 
         garbage_collect_form_values(signature_name, genes_entered, cancer_types_entered, cut_point_entered)
+        st.session_state.form_submitted = True
         return True
     else:
         # Garbage collection of unused objects 
@@ -86,15 +87,6 @@ def get_form_values():
     cancer_types_entered = st.session_state.get('cancer_types_entered', '')
     cut_point_entered = st.session_state.get('cut_point_entered', '')
     return signature_name, genes_entered, cancer_types_entered, cut_point_entered
-
-
-# TEST - to track memory usage and bug fix app crashes
-def get_memory_usage():
-    # Locate the current process
-    process = psutil.Process(os.getpid())
-    memory_info = process.memory_info()
-    # Convert from bytes to megabytes
-    return memory_info.rss / 1024 / 1024
 
 
 # TEST - to collect and remove unused objects and items
