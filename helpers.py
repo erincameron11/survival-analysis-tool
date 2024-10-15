@@ -11,7 +11,6 @@ import os # for KM plot downloading
 from pathlib import Path # for KM plot downloading
 import psutil # TESTING -- for memory logging
 import gc # TESTING -- for garbage collection of unused objects
-from memory_profiler import profile # TESTING -- for large uses of memory
 
 
 
@@ -146,7 +145,6 @@ def create_rna_dataframe(cancer_types_entered):
     return df
 
 
-# @profile
 def calculate_ssgsea(df, phenotype_df):
     """
     Calculates ssGSEA scores using GSEAPY ssGSEA.
