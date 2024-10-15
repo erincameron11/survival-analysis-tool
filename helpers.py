@@ -9,8 +9,7 @@ import kaplanmeier as km # for kaplan meier plotting
 import statsmodels.api as sm # for hazard ratio calculations 
 import os # for KM plot downloading
 from pathlib import Path # for KM plot downloading
-import psutil # TESTING -- for memory logging
-import gc # TESTING -- for garbage collection of unused objects
+import gc # for garbage collection of unused objects
 
 
 
@@ -147,7 +146,7 @@ def create_rna_dataframe(cancer_types_entered):
 
 def calculate_ssgsea(df, phenotype_df):
     """
-    Calculates ssGSEA scores using GSEAPY ssGSEA.
+    Calculates ssGSEA scores using GSEAPY ssGSEA via batch processing.
 
     Parameters
     ----------

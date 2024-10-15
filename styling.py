@@ -1,6 +1,6 @@
 # ------------------------------------ IMPORTS ------------------------------------
 import streamlit as st # for UI
-import streamlit.components.v1 as components # for KM plot page anchor
+import streamlit.components.v1 as components # for page scrolling
 
 
 
