@@ -124,17 +124,9 @@ def create_rna_dataframe(cancer_types_entered):
         # Construct the file name pattern to look for
         file_name = f'GDC-PANCAN.htseq_fpkm-uq_{cancer_type}.parquet'
         file_path = os.path.join(data_folder, file_name)
-
-        # TCGA-BRCA was separated into 2 separate files for file size considerations
-        if cancer_type == 'TCGA-BRCA':
-            # Read the two parquet files
-            df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}_1.parquet')
-            df_list.append(df)
-            df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}_2.parquet')
-            df_list.append(df)
-        else:
-            df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}.parquet')
-            df_list.append(df)
+        # Read in the file
+        df = pd.read_parquet(f'./data/GDC-PANCAN.htseq_fpkm-uq_{cancer_type}.parquet')
+        df_list.append(df)
             
     df = pd.concat(df_list, axis=1)
 
@@ -146,7 +138,7 @@ def create_rna_dataframe(cancer_types_entered):
 
 def calculate_ssgsea(df, phenotype_df):
     """
-    Calculates ssGSEA scores using GSEAPY ssGSEA via batch processing.
+    Calculates ssGSEA scores using GSEAPY ssGSEA.
 
     Parameters
     ----------
