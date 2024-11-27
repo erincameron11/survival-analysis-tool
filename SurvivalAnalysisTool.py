@@ -1,6 +1,9 @@
 # ------------------------------------ IMPORTS ------------------------------------
 import streamlit as st # for UI
 import matplotlib.pyplot as plt # for KM plots
+from datetime import datetime # for file naming convention for exports
+# import io # for data exports
+# import zipfile # to zip files for data exports
 # Import external files
 from data import *
 from helpers import *
@@ -119,9 +122,15 @@ def main():
                      "  \n**Cancer Types**: ", cancer_types_entered_str, "  \n**Cut-point**: ", cut_point_entered)
             st.divider()
 
-            # Display the Kaplan Meier plot and download button
+            # Display the Kaplan Meier plot
             st.pyplot(fig=km_plot_figure, use_container_width=True)
-            st.button(":arrow_down: Download Results", on_click=download_output, args=(ssgsea_scores, km_plot_figure,))
+
+            # Display download button
+            # Get the current date and time for file naming
+            today = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            zip_file_name = f'TCGA_SIGvival_output_{today}.zip'
+            zip_file_buffer = download_output(ssgsea_scores, km_plot_figure)
+            st.download_button(label=":arrow_down: Download Results", data=zip_file_buffer, file_name=zip_file_name, mime='application/zip')
     
 
 

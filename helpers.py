@@ -10,7 +10,8 @@ import statsmodels.api as sm # for hazard ratio calculations
 import os # for KM plot downloading
 from pathlib import Path # for KM plot downloading
 import gc # for garbage collection of unused objects
-
+import io # for data export
+import zipfile # to zip files for data exports
 
 
 # ------------------------------------ HELPER FUNCTIONS ------------------------------------
@@ -258,6 +259,7 @@ def create_km_plot(ssgsea_scores, survival_df):
 def download_output(ssgsea_scores, km_plot_figure):
     """
     Downloads ssGSEA data to CSV file and KM plot to PNG on the users' local machine Downloads folder.
+    Generates a zip file containing ssGSEA data (CSV format) and Kaplan Meier plot (PNG format) for download.
 
     Parameters
     ----------
@@ -268,19 +270,29 @@ def download_output(ssgsea_scores, km_plot_figure):
 
     Returns
     -------
-    None
+    zip_buffer : io.BytesIO
+        A BytesIO buffer containing the zip file with the following contents:
+        - A CSV file with ssGSEA scores.
+        - A PNG file with the Kaplan-Meier plot.
     """
     # Get the current date and time for file naming
     today = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # Get the Downloads folder path
-    downloads_folder = str(Path.home() / "Downloads")
     
-    # ssGSEA export into CSV format
-    # Create the full path for the ssGSEA scores and output to CSV
-    ssgsea_file_path = os.path.join(downloads_folder, f'ssgsea_scores_{today}.csv')
-    ssgsea_scores.to_csv(ssgsea_file_path, index=False)
-
-    # KM plot export
-    # Create the full path for the KM plot and output file
-    km_file_path = os.path.join(downloads_folder, f'km_plot_{today}.png')
-    km_plot_figure.savefig(km_file_path, bbox_inches='tight')
+    # Create a zip archive in-memory
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        # Add ssGSEA csv to the zip
+        ssgsea_buffer = io.StringIO()
+        ssgsea_scores.to_csv(ssgsea_buffer, index=False)
+        ssgsea_buffer.seek(0)
+        zf.writestr(f'ssgsea_scores_{today}.csv', ssgsea_buffer.getvalue())
+        
+        # Add Kaplan Meier Plot png to the zip
+        km_buffer = io.BytesIO()
+        km_plot_figure.savefig(km_buffer, format='png', bbox_inches='tight')
+        km_buffer.seek(0)
+        zf.writestr(f'km_plot_{today}.png', km_buffer.getvalue())
+    # Reset buffer position for reading
+    zip_buffer.seek(0)
+    return zip_buffer
