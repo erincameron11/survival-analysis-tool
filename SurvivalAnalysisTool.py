@@ -127,7 +127,7 @@ def main():
 
             # Display download button
             # Get the current date and time for file naming
-            today = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            today = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             zip_file_name = f'TCGA_SIGvival_output_{today}.zip'
             zip_file_buffer = download_output(ssgsea_scores, km_plot_figure)
             st.download_button(label=":arrow_down: Download Results", data=zip_file_buffer, file_name=zip_file_name, mime='application/zip')

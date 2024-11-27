@@ -56,19 +56,19 @@ def custom_css():
             border-radius: 4px;
         }
         /* Button initial style */
-        div.stButton > button, div.stFormSubmitButton > button {
+        div.stButton > button, div.stFormSubmitButton > button, div.stDownloadButton > button {
             background-color: white !important;
             border-color: #D5D6D8 !important;
             color: #31333F !important;
         }
         /* Button hover effect */
-        div.stButton > button:hover, div.stFormSubmitButton > button:hover {
+        div.stButton > button:hover, div.stFormSubmitButton > button:hover, div.stDownloadButton > button:hover {
             background-color: #1f77b4 !important;
             border-color: #1f77b4 !important;
             color: white !important;
         }
         /* Button active effect */
-        div.stButton > button:active, div.stFormSubmitButton > button:active {
+        div.stButton > button:active, div.stFormSubmitButton > button:active, div.stDownloadButton > button:active {
             background-color: #5a9bd4 !important;
             border-color: #5a9bd4 !important;
             color: white !important;
