@@ -2,8 +2,6 @@
 import streamlit as st # for UI
 import matplotlib.pyplot as plt # for KM plots
 from datetime import datetime # for file naming convention for exports
-# import io # for data exports
-# import zipfile # to zip files for data exports
 # Import external files
 from data import *
 from helpers import *
